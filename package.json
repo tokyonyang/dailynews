@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/copy-ffmpeg.mjs",
-    "build": "node scripts/copy-ffmpeg.mjs",
+    "build": "node scripts/build-public.mjs",
     "dev": "vercel dev",
     "start": "vercel dev"
   },
