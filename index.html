@@ -53,12 +53,34 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <div class="settings">
 <div><label>OpenAI TTS 모델</label><select id="model"><option>gpt-4o-mini-tts</option><option>tts-1</option><option>tts-1-hd</option></select></div>
 <div><label>음성</label><select id="voice"><option>marin</option><option>cedar</option><option>coral</option><option>alloy</option><option>ash</option><option>ballad</option><option>echo</option><option>fable</option><option>nova</option><option>onyx</option><option>sage</option><option>shimmer</option><option>verse</option></select></div>
-<div><label>영상 비율</label><select id="ratio"><option value="square">1:1 인스타 카드</option><option value="vertical">9:16 쇼츠/릴스</option><option value="wide">16:9 유튜브</option></select></div>
+<div><label>영상 비율</label><select id="ratio"><option value="square">1:1 인스타 카드</option><option value="vertical" selected>9:16 쇼츠/릴스</option><option value="wide">16:9 유튜브</option></select></div>
 <div><label>자막/브랜드</label><select id="burnCaption"><option value="yes">영상에 하단 자막 포함</option><option value="no">원본 이미지만 사용</option></select></div>
+<div><label>AI 카드뉴스 이미지 품질</label><select id="imageQuality"><option value="medium" selected>medium (권장)</option><option value="low">low (빠름/저비용)</option><option value="high">high (고품질/느림)</option><option value="auto">auto</option></select></div>
+<div><label>&nbsp;</label><button class="warn" style="width:100%" onclick="generateAllImages()">전체 이미지 자동 생성</button></div>
 <div style="grid-column:1/-1"><label>낭독 지시문</label><input id="instructions" value="한국어 뉴스 앵커처럼 또렷하고 빠르게, 카드뉴스 쇼츠용으로 신뢰감 있게 읽어줘. 숫자는 자연스럽게 읽고 과장된 감정은 피합니다."></div>
+<div style="grid-column:1/-1"><label>AI 이미지 스타일 지시문</label><input id="imageStyle" value="다크 네이비 배경, 미니멀 벡터 아이콘과 그래픽, 네온 하늘색·노란색·빨간색 포인트 컬러, 고급스러운 금융/테크 뉴스 무드, 여백이 넉넉한 구도"></div>
+</div>
+<div class="small" style="margin-top:14px;padding:10px 12px;background:rgba(32,214,255,.08);border-radius:10px">
+마무리 문구(마지막 장표 자동 삽입): <b>더욱 자세한 뉴스 확인은 <a href="https://gooddaynews.store" target="_blank" style="color:#20d6ff">https://gooddaynews.store</a> 에서 확인하세요</b><br>
+※ MP4 영상 픽셀 안의 링크는 클릭할 수 없습니다. 실제 클릭되는 링크는 아래 유튜브 설명란, 인스타그램 프로필 링크, 블로그 본문에 넣어야 합니다.
 </div>
 <div class="note" id="status">상태: 대기 중</div>
 <div class="output" id="output"></div>
+
+<div class="bulk" style="margin-top:16px">
+<div class="brand" style="margin-bottom:8px">유튜브 쇼츠 자동 업로드</div>
+<div class="small" style="margin-bottom:10px">MP4 생성을 먼저 완료해야 업로드할 수 있습니다. 인증은 서버(Vercel)에 저장된 YT_CLIENT_ID/YT_CLIENT_SECRET/YT_REFRESH_TOKEN으로 처리되며, 브라우저는 단명 액세스 토큰만 받아 유튜브로 직접 업로드합니다.</div>
+<div class="row">
+<input type="text" id="ytTitle" placeholder="영상 제목 (예: 7월 5일 굿데이 모닝브리핑 #Shorts)">
+<textarea id="ytDescription" style="min-height:90px" placeholder="영상 설명 (마무리 링크 자동 포함)"></textarea>
+<input type="text" id="ytTags" placeholder="태그(쉼표로 구분) 예: 굿데이뉴스,모닝브리핑,경제뉴스,쇼츠">
+</div>
+<div class="controls" style="grid-template-columns:1fr 1fr 1fr">
+<select id="ytPrivacy"><option value="private">비공개(private)</option><option value="unlisted" selected>미등록(unlisted)</option><option value="public">공개(public)</option></select>
+<button class="secondary" onclick="fillYoutubeDefaults()">기본값 자동 채우기</button>
+<button class="green" onclick="uploadToYoutubeShorts()">유튜브 쇼츠 업로드</button>
+</div>
+</div>
 </section>
 
 <section class="card right">
@@ -94,7 +116,7 @@ window.ffmpegState = { ffmpeg:null, loaded:false, FFmpeg, fetchFile, toBlobURL }
 </script>
 
 <script>
-const initialSlides = [{"title": "1장. 표지 / 오늘의 핵심 흐름", "script": "오늘 아침 꼭 봐야 할 핵심 이슈입니다. 반도체 변동성 장세, 메타발 AI 과잉투자 논쟁, 동탄·기흥·구리 토지거래허가구역 시작, 그리고 최저임금 협상 교착까지 한 번에 정리합니다.", "caption": "오늘 뉴스, 이 4가지만 보면 됩니다."}, {"title": "2장. 국내 경제·증시", "script": "첫 번째는 국내 증시입니다. 코스피는 메타발 AI 과잉투자 우려로 급락한 뒤, 반도체 대형주 반발 매수로 다시 8,000선을 회복했습니다. 핵심은 수요 둔화 확정이 아니라, 반도체 쏠림 구조 때문에 시장 변동성이 커졌다는 점입니다.", "caption": "반도체 뉴스 하나에 코스피가 출렁입니다."}, {"title": "3장. AI·반도체·빅테크", "script": "두 번째는 AI 반도체 이슈입니다. 메타가 남는 AI 컴퓨팅 자원을 클라우드 사업으로 활용할 수 있다는 보도가 나오면서, 시장은 AI 인프라가 과잉투자된 것 아니냐는 의심을 키웠습니다. 아직 수요 붕괴가 확인된 것은 아니며, 빅테크 전략 변화가 시장 심리를 흔든 단계로 보는 게 안전합니다.", "caption": "AI 서버 부족에서 공급과잉 논쟁으로 바뀌었습니다."}, {"title": "4장. 부동산·정책", "script": "세 번째는 부동산 정책입니다. 동탄구, 기흥구, 구리시는 규제지역에 이어 토지거래허가구역 적용이 시작됐습니다. 이제 단순 투자 목적의 매수는 어려워지고, 실거주 의무와 갭투자 차단이 핵심 변화가 됩니다.", "caption": "동탄·기흥·구리, 집 사는 방식이 달라졌습니다."}, {"title": "5장. 국내 핫이슈·사회", "script": "네 번째는 최저임금 협상입니다. 노동계는 1만 1,700원, 경영계는 1만 410원을 제시하며 격차는 1,290원으로 남아 있습니다. 최저임금은 근로자에게는 생계비 문제이고, 자영업자에게는 고정비 문제입니다.", "caption": "최저임금은 월급이자 가게 운영비입니다."}, {"title": "6장. 오늘의 콘텐츠 포인트", "script": "오늘 콘텐츠 소재로는 두 가지가 가장 좋습니다. 첫째, 메타발 쇼크가 AI 반도체 공급과잉 논쟁으로 번진 이유. 둘째, 동탄·기흥·구리 토허제 시작으로 집을 사는 방식이 어떻게 달라지는지입니다. 오늘 뉴스는 단순 속보보다 왜 시장이 흔들렸는가와 내 생활에 무엇이 달라지는가를 중심으로 보면 좋습니다.", "caption": "오늘의 핵심 소재는 AI 반도체와 부동산 규제입니다."}];
+const initialSlides = [{"title": "1장. 표지 / 오늘의 핵심 흐름", "script": "오늘 아침 꼭 봐야 할 핵심 이슈입니다. 반도체 변동성 장세, 메타발 AI 과잉투자 논쟁, 동탄·기흥·구리 토지거래허가구역 시작, 그리고 최저임금 협상 교착까지 한 번에 정리합니다.", "caption": "오늘 뉴스, 이 4가지만 보면 됩니다."}, {"title": "2장. 국내 경제·증시", "script": "첫 번째는 국내 증시입니다. 코스피는 메타발 AI 과잉투자 우려로 급락한 뒤, 반도체 대형주 반발 매수로 다시 8,000선을 회복했습니다. 핵심은 수요 둔화 확정이 아니라, 반도체 쏠림 구조 때문에 시장 변동성이 커졌다는 점입니다.", "caption": "반도체 뉴스 하나에 코스피가 출렁입니다."}, {"title": "3장. AI·반도체·빅테크", "script": "두 번째는 AI 반도체 이슈입니다. 메타가 남는 AI 컴퓨팅 자원을 클라우드 사업으로 활용할 수 있다는 보도가 나오면서, 시장은 AI 인프라가 과잉투자된 것 아니냐는 의심을 키웠습니다. 아직 수요 붕괴가 확인된 것은 아니며, 빅테크 전략 변화가 시장 심리를 흔든 단계로 보는 게 안전합니다.", "caption": "AI 서버 부족에서 공급과잉 논쟁으로 바뀌었습니다."}, {"title": "4장. 부동산·정책", "script": "세 번째는 부동산 정책입니다. 동탄구, 기흥구, 구리시는 규제지역에 이어 토지거래허가구역 적용이 시작됐습니다. 이제 단순 투자 목적의 매수는 어려워지고, 실거주 의무와 갭투자 차단이 핵심 변화가 됩니다.", "caption": "동탄·기흥·구리, 집 사는 방식이 달라졌습니다."}, {"title": "5장. 국내 핫이슈·사회", "script": "네 번째는 최저임금 협상입니다. 노동계는 1만 1,700원, 경영계는 1만 410원을 제시하며 격차는 1,290원으로 남아 있습니다. 최저임금은 근로자에게는 생계비 문제이고, 자영업자에게는 고정비 문제입니다.", "caption": "최저임금은 월급이자 가게 운영비입니다."}, {"title": "6장. 오늘의 콘텐츠 포인트", "script": "오늘 콘텐츠 소재로는 두 가지가 가장 좋습니다. 첫째, 메타발 쇼크가 AI 반도체 공급과잉 논쟁으로 번진 이유. 둘째, 동탄·기흥·구리 토허제 시작으로 집을 사는 방식이 어떻게 달라지는지입니다. 오늘 뉴스는 단순 속보보다 왜 시장이 흔들렸는가와 내 생활에 무엇이 달라지는가를 중심으로 보면 좋습니다. 더욱 자세한 뉴스는 gooddaynews.store 에서 확인하세요.", "caption": "더욱 자세한 뉴스 확인은 https://gooddaynews.store 에서 확인하세요"}];
 let slides = JSON.parse(JSON.stringify(initialSlides));
 let currentIndex=0, playing=false;
 const $=id=>document.getElementById(id);
@@ -110,8 +132,12 @@ function renderEditors(){
     wrap.className='slide-editor'+(idx===currentIndex?' active':'');
     wrap.onclick=e=>{ if(!['TEXTAREA','INPUT','LABEL','BUTTON','A','AUDIO'].includes(e.target.tagName)){currentIndex=idx;renderAll()} };
     const audioBadge = slide.audioUrl ? '<span class="badge ok">MP3 생성됨</span>' : '<span class="badge">MP3 없음</span>';
-    wrap.innerHTML=`<label class="thumb" for="upload-${idx}">${slide.image?`<img src="${slide.image}">`:`${idx+1}장<br>이미지 업로드`}</label>
-      <input id="upload-${idx}" type="file" accept="image/*" onchange="handleSingleUpload(event,${idx})">
+    const imageBadge = slide.image ? (slide.imageSource==='ai' ? '<span class="badge ok">AI 이미지</span>' : '<span class="badge ok">업로드 이미지</span>') : '<span class="badge">이미지 없음</span>';
+    wrap.innerHTML=`<div class="row" style="gap:6px">
+        <label class="thumb" for="upload-${idx}">${slide.image?`<img src="${slide.image}">`:`${idx+1}장<br>이미지 업로드`}</label>
+        <input id="upload-${idx}" type="file" accept="image/*" onchange="handleSingleUpload(event,${idx})">
+        <button class="secondary" style="font-size:11px;padding:8px" onclick="event.stopPropagation();generateImageForIndex(${idx})">AI 이미지 생성</button>
+      </div>
       <div class="row">
         <input type="text" value="${esc(slide.title)}" onchange="slides[${idx}].title=this.value;renderAll()">
         <textarea onchange="slides[${idx}].script=this.value;slides[${idx}].audioUrl='';renderAll()">${esc(slide.script)}</textarea>
@@ -122,7 +148,7 @@ function renderEditors(){
           <button class="secondary" onclick="event.stopPropagation();downloadAudioIndex(${idx})" ${slide.audioUrl?'':'disabled'}>다운로드</button>
         </div>
         ${slide.audioUrl?`<audio controls src="${slide.audioUrl}"></audio>`:''}
-        <div class="meta"><span class="badge">${estimateSeconds(slide.script)}초 예상</span><span class="badge">자막 ${(slide.caption||'').length}자</span>${audioBadge}</div>
+        <div class="meta"><span class="badge">${estimateSeconds(slide.script)}초 예상</span><span class="badge">자막 ${(slide.caption||'').length}자</span>${audioBadge}${imageBadge}</div>
       </div>`;
     slidesEl.appendChild(wrap);
   });
@@ -135,8 +161,49 @@ function renderPreview(){
   progressBar.style.width=((currentIndex+1)/slides.length*100)+'%';
 }
 function renderAll(){renderPreview();renderEditors()}
-function handleSingleUpload(e,idx){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;currentIndex=idx;renderAll()};r.readAsDataURL(f)}
-function handleBulkUpload(e){Array.from(e.target.files).slice(0,slides.length).forEach((f,idx)=>{const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;renderAll()};r.readAsDataURL(f)})}
+function handleSingleUpload(e,idx){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;slides[idx].imageSource='upload';currentIndex=idx;renderAll()};r.readAsDataURL(f)}
+function handleBulkUpload(e){Array.from(e.target.files).slice(0,slides.length).forEach((f,idx)=>{const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;slides[idx].imageSource='upload';renderAll()};r.readAsDataURL(f)})}
+
+function getImageGenSize(){const r=$('ratio').value; if(r==='vertical') return '1024x1536'; if(r==='wide') return '1536x1024'; return '1024x1024'}
+
+function buildTopicVisualConcept(slide){
+  const text=`${slide.title||''} ${slide.script||''} ${slide.caption||''}`;
+  const rules=[
+    {test:/반도체|웨이퍼|파운드리|칩|HBM/,concept:'반도체 웨이퍼와 회로 기판, 데이터센터 서버랙 실루엣'},
+    {test:/코스피|코스닥|증시|주가|환율|증권|외국인/,concept:'상승·하락하는 캔들스틱 주가 그래프와 티커 라인'},
+    {test:/AI|인공지능|빅테크|클라우드|데이터센터|서버/,concept:'AI 뉴럴 네트워크 노드와 서버 그래픽, 미래적인 회로 패턴'},
+    {test:/부동산|아파트|주택|토지거래|규제지역|갭투자|전세|매매/,concept:'도심 아파트 단지 스카이라인 실루엣과 상승 그래프'},
+    {test:/최저임금|노동|일자리|사회|자영업|협상/,concept:'회의 테이블을 사이에 둔 두 그룹의 실루엣, 협상 이미지'},
+    {test:/콘텐츠|블로그|카드뉴스|숏폼|쇼츠|릴스/,concept:'노트북, 스마트폰, 콘텐츠 제작 아이콘이 어우러진 구성'}
+  ];
+  for(const rule of rules){ if(rule.test.test(text)) return rule.concept; }
+  return '오늘의 주요 뉴스 헤드라인을 상징하는 추상적인 금융·경제 그래픽';
+}
+
+function buildImagePrompt(slide){
+  const concept=buildTopicVisualConcept(slide);
+  const style=($('imageStyle')&&$('imageStyle').value.trim())||'다크 네이비 배경, 미니멀 벡터 아이콘과 그래픽, 네온 하늘색·노란색·빨간색 포인트 컬러';
+  return `한국 경제·시사 뉴스 카드뉴스용 배경 일러스트레이션. 주제: ${concept}. 스타일: ${style}. `
+    + `절대 지켜야 할 규칙: 이미지 안에 글자, 숫자, 문장, 로고, 워터마크를 어떤 형태로도 넣지 않습니다. `
+    + `실제 인물의 얼굴 클로즈업 대신 상징적인 오브젝트와 아이콘 중심의 구도로, 하단 30% 영역은 자막이 들어갈 수 있도록 비교적 단순하게 비워둡니다.`;
+}
+
+async function generateImageForIndex(idx){
+  const slide=slides[idx];
+  setStatus(`${idx+1}장 AI 이미지 생성 중...`);
+  try{
+    const prompt=buildImagePrompt(slide);
+    const res=await fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      prompt, size:getImageGenSize(), quality:$('imageQuality').value
+    })});
+    if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
+    const data=await res.json();
+    slide.image=`data:image/png;base64,${data.b64_json}`;
+    slide.imageSource='ai';
+    currentIndex=idx; setStatus(`${idx+1}장 AI 이미지 생성 완료`); renderAll();
+  }catch(err){console.error(err);setStatus('오류: '+err.message);alert('AI 이미지 생성 실패\n\n'+err.message+'\n\nVercel 환경변수 OPENAI_API_KEY와 OpenAI 조직 인증(Organization Verification) 여부를 확인하세요.')}
+}
+async function generateAllImages(){for(let i=0;i<slides.length;i++){await generateImageForIndex(i)}setStatus('전체 이미지 자동 생성 완료')}
 function prevSlide(){currentIndex=Math.max(0,currentIndex-1);renderAll()} function nextSlide(){currentIndex=Math.min(slides.length-1,currentIndex+1);renderAll()}
 
 async function generateAudioForIndex(idx){
@@ -165,7 +232,7 @@ function clearAudios(){slides.forEach(s=>{if(s.audioUrl)URL.revokeObjectURL(s.au
 function secToSrtTime(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60),ms=Math.floor((sec-Math.floor(sec))*1000);return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`}
 function downloadSrt(){let now=0,srt='';slides.forEach((sl,i)=>{const d=estimateSeconds(sl.script);srt+=`${i+1}\n${secToSrtTime(now)} --> ${secToSrtTime(now+d)}\n${sl.caption||sl.script}\n\n`;now+=d+.4});const blob=new Blob([srt],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='goodday24news_morning_briefing.srt';a.click();URL.revokeObjectURL(a.href)}
 
-function resetScripts(){slides=JSON.parse(JSON.stringify(initialSlides));renderAll();setStatus('오늘 예시로 초기화 완료')}
+function resetScripts(){slides=JSON.parse(JSON.stringify(initialSlides));applyOutroToLastSlide();renderAll();setStatus('오늘 예시로 초기화 완료')}
 
 function cleanBriefingText(text){
   return String(text||'')
@@ -320,8 +387,21 @@ function autoBuildFromBriefing(){
     return {title:t.title, script:naturalizeScript(t.prefix, body, t.fallback), caption:t.cap};
   });
 
+  applyOutroToLastSlide();
   renderAll();
   setStatus('마크다운 제거 및 자연어 변환 완료');
+}
+
+const OUTRO_URL='https://gooddaynews.store';
+const OUTRO_CAPTION=`더욱 자세한 뉴스 확인은 ${OUTRO_URL} 에서 확인하세요`;
+const OUTRO_SPOKEN=`더욱 자세한 뉴스는 gooddaynews.store 에서 확인하세요.`;
+function applyOutroToLastSlide(){
+  const last=slides[slides.length-1];
+  if(!last) return;
+  last.caption=OUTRO_CAPTION;
+  if(!last.script.includes('gooddaynews.store')){
+    last.script=`${last.script.trim().replace(/\s+$/,'')} ${OUTRO_SPOKEN}`.replace(/\s+/g,' ').trim();
+  }
 }
 
 function getSize(){const r=$('ratio').value; if(r==='vertical') return [1080,1920]; if(r==='wide') return [1920,1080]; return [1080,1080]}
@@ -357,11 +437,11 @@ async function createSlidePngBlob(slide, idx){
       ctx.fillStyle='#20d6ff';
       ctx.font=`900 ${Math.floor(W*0.030)}px sans-serif`;
       ctx.textAlign='left';
-      ctx.fillText('자세한 내용은 goodday100news 블로그에서 확인하세요', W*.055, y+Math.floor(boxH*.42));
+      ctx.fillText('더욱 자세한 뉴스 확인은', W*.055, y+Math.floor(boxH*.38));
 
       ctx.fillStyle='#ffffff';
-      ctx.font=`900 ${Math.floor(W*0.034)}px sans-serif`;
-      ctx.fillText('https://gooddaynews.store', W*.055, y+Math.floor(boxH*.72));
+      ctx.font=`900 ${Math.floor(W*0.032)}px sans-serif`;
+      ctx.fillText('https://gooddaynews.store 에서 확인하세요', W*.055, y+Math.floor(boxH*.68));
     } else {
       ctx.fillStyle='#20d6ff';
       ctx.font=`900 ${Math.floor(W*0.024)}px sans-serif`;
@@ -417,15 +497,80 @@ async function renderMp4(){
     await ffmpeg.exec(['-y','-f','concat','-safe','0','-i','list.txt','-c','copy','goodday24news_morning_briefing.mp4']);
     const data=await ffmpeg.readFile('goodday24news_morning_briefing.mp4');
     const blob=new Blob([data.buffer],{type:'video/mp4'});
+    window.lastMp4Blob=blob;
     const url=URL.createObjectURL(blob);
     output.innerHTML=`<a href="${url}" download="goodday24news_morning_briefing.mp4">MP4 다운로드</a><video src="${url}" controls style="width:100%;margin-top:12px;border-radius:14px"></video>`;
     setStatus('MP4 생성 완료');
+    fillYoutubeDefaults();
   }catch(err){console.error(err);setStatus('MP4 생성 오류: '+err.message);alert('MP4 생성 실패\n\n'+err.message+'\n\n브라우저 메모리 부족이면 새로고침 후 1:1 비율 또는 짧은 음성으로 다시 시도하세요.')}
+}
+
+function fillYoutubeDefaults(){
+  const today=new Date();
+  const dateLabel=`${today.getMonth()+1}월 ${today.getDate()}일`;
+  if(!$('ytTitle').value.trim()) $('ytTitle').value=`${dateLabel} 굿데이 모닝브리핑 #Shorts`;
+  if(!$('ytDescription').value.trim()){
+    const bullets=slides.map(s=>`- ${s.caption}`).join('\n');
+    $('ytDescription').value=`${bullets}\n\n${OUTRO_CAPTION}\n\n#굿데이뉴스 #모닝브리핑 #경제뉴스 #부동산 #AI반도체 #Shorts`;
+  }
+  if(!$('ytTags').value.trim()) $('ytTags').value='굿데이뉴스,모닝브리핑,경제뉴스,부동산,AI반도체,쇼츠';
+}
+
+async function getYoutubeAccessToken(){
+  const res=await fetch('/api/youtube-token',{method:'POST'});
+  if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
+  const data=await res.json();
+  return data.access_token;
+}
+
+async function uploadToYoutubeShorts(){
+  try{
+    if(!window.lastMp4Blob){ alert('먼저 [MP4 생성]을 완료해야 업로드할 수 있습니다.'); return; }
+    const title=$('ytTitle').value.trim();
+    const description=$('ytDescription').value.trim();
+    const tags=$('ytTags').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const privacyStatus=$('ytPrivacy').value;
+    if(!title){ alert('영상 제목을 입력하세요.'); return; }
+    if(!confirm(`유튜브에 "${privacyStatus}" 상태로 업로드합니다.\n\n제목: ${title}\n\n계속할까요?`)) return;
+
+    setStatus('유튜브 인증 토큰 발급 중...');
+    const accessToken=await getYoutubeAccessToken();
+
+    setStatus('유튜브 업로드 세션 생성 중...');
+    const metadata={ snippet:{title,description,tags,categoryId:'25'}, status:{privacyStatus,selfDeclaredMadeForKids:false} };
+    const initRes=await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{
+      method:'POST',
+      headers:{
+        'Authorization':`Bearer ${accessToken}`,
+        'Content-Type':'application/json; charset=UTF-8',
+        'X-Upload-Content-Type':'video/mp4',
+        'X-Upload-Content-Length':String(window.lastMp4Blob.size)
+      },
+      body:JSON.stringify(metadata)
+    });
+    if(!initRes.ok){ const txt=await initRes.text(); throw new Error(txt||initRes.statusText); }
+    const uploadUrl=initRes.headers.get('Location');
+    if(!uploadUrl) throw new Error('업로드 URL(Location 헤더)을 받지 못했습니다. 브라우저 확장 프로그램이 헤더를 가리는지 확인하세요.');
+
+    setStatus('유튜브로 영상 업로드 중... (파일 크기에 따라 시간이 걸릴 수 있습니다)');
+    const putRes=await fetch(uploadUrl,{method:'PUT',headers:{'Content-Type':'video/mp4'},body:window.lastMp4Blob});
+    if(!putRes.ok){ const txt=await putRes.text(); throw new Error(txt||putRes.statusText); }
+    const videoData=await putRes.json();
+    const videoId=videoData.id;
+    const shortsUrl=`https://youtube.com/shorts/${videoId}`;
+    output.innerHTML+=`<a href="${shortsUrl}" target="_blank">유튜브 쇼츠 업로드 완료 → 바로가기</a>`;
+    setStatus('유튜브 업로드 완료: '+videoId);
+  }catch(err){
+    console.error(err); setStatus('유튜브 업로드 오류: '+err.message);
+    alert('유튜브 업로드 실패\n\n'+err.message+'\n\nVercel 환경변수 YT_CLIENT_ID / YT_CLIENT_SECRET / YT_REFRESH_TOKEN과 OAuth 동의 범위(youtube.upload)를 확인하세요.');
+  }
 }
 window.handleSingleUpload=handleSingleUpload; window.handleBulkUpload=handleBulkUpload; window.prevSlide=prevSlide; window.nextSlide=nextSlide;
 window.generateAudioForIndex=generateAudioForIndex; window.generateCurrentAudio=generateCurrentAudio; window.generateAllAudio=generateAllAudio;
 window.playAudioIndex=playAudioIndex; window.downloadAudioIndex=downloadAudioIndex; window.playAllAudio=playAllAudio; window.downloadSrt=downloadSrt; window.stopAll=stopAll;
 window.resetScripts=resetScripts; window.clearAudios=clearAudios; window.autoBuildFromBriefing=autoBuildFromBriefing; window.renderMp4=renderMp4;
+window.generateImageForIndex=generateImageForIndex; window.generateAllImages=generateAllImages;
+window.fillYoutubeDefaults=fillYoutubeDefaults; window.uploadToYoutubeShorts=uploadToYoutubeShorts;
 renderAll();
 </script>
 </body></html>

@@ -2,6 +2,12 @@
   "functions": {
     "api/tts.js": {
       "maxDuration": 30
+    },
+    "api/image.js": {
+      "maxDuration": 60
+    },
+    "api/youtube-token.js": {
+      "maxDuration": 15
     }
   },
   "headers": [
