@@ -4,8 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/copy-ffmpeg.mjs",
+    "build": "node scripts/copy-ffmpeg.mjs",
     "dev": "vercel dev",
     "start": "vercel dev"
+  },
+  "dependencies": {
+    "@ffmpeg/core": "0.12.10",
+    "@ffmpeg/ffmpeg": "0.12.10",
+    "@ffmpeg/util": "0.12.2"
   },
   "engines": {
     "node": ">=20"

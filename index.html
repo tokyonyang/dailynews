@@ -134,10 +134,21 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 </main>
 
 <script type="module">
-import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
-import { toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js";
-
-window.ffmpegState = { ffmpeg:null, loaded:false, loadingPromise:null, FFmpeg, toBlobURL };
+(async()=>{
+  try{
+    // 중요: @ffmpeg/ffmpeg 0.12+는 내부에서 worker.js를 생성하므로 CDN import를 쓰면
+    // Vercel 도메인과 CDN 도메인이 달라 Worker 생성이 차단됩니다.
+    // 그래서 Vercel 빌드 때 node_modules의 dist 파일을 /vendor 아래로 복사해 같은 origin에서 로딩합니다.
+    const [{ FFmpeg }, { toBlobURL }] = await Promise.all([
+      import('/vendor/ffmpeg/esm/index.js'),
+      import('/vendor/util/esm/index.js')
+    ]);
+    window.ffmpegState = { ffmpeg:null, loaded:false, loadingPromise:null, FFmpeg, toBlobURL, moduleError:null };
+  }catch(err){
+    console.error('ffmpeg wasm local module load failed:', err);
+    window.ffmpegState = { ffmpeg:null, loaded:false, loadingPromise:null, FFmpeg:null, toBlobURL:null, moduleError:err };
+  }
+})();
 </script>
 
 <script>
@@ -700,6 +711,7 @@ async function fetchWithProgress(url, mimeType, onProgress){
 
 async function loadFfmpeg(){
   if(!window.ffmpegState){throw new Error('ffmpeg.wasm 모듈이 아직 로딩되지 않았습니다. 새로고침 후 다시 시도하세요.')}
+  if(window.ffmpegState.moduleError){throw new Error('ffmpeg 로컬 모듈 로딩 실패: /vendor 파일이 배포되지 않았습니다. package.json의 build/postinstall이 실행됐는지 확인하세요. 원인: '+formatError(window.ffmpegState.moduleError));}
   if(window.ffmpegState.loaded) return window.ffmpegState.ffmpeg;
   if(window.ffmpegState.loadingPromise) return window.ffmpegState.loadingPromise;
 
@@ -707,10 +719,10 @@ async function loadFfmpeg(){
   const ffmpeg = new FFmpeg();
   ffmpeg.on('log', ({message})=>{ if(message) setStatus(message.slice(0,180)); });
 
-  // 공식 ffmpeg.wasm 0.12 예제와 같은 로딩 방식입니다.
-  // single-thread @ffmpeg/core는 ffmpeg-core.worker.js가 없으므로 workerURL을 넘기지 않습니다.
-  // classWorkerURL도 직접 넘기지 않고 @ffmpeg/ffmpeg ESM이 worker.js를 정상 해석하도록 둡니다.
-  const coreBaseURL='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+  // ffmpeg.wasm 0.12+는 내부 worker.js가 필요합니다.
+  // worker.js는 CDN이 아니라 같은 Vercel origin의 /vendor/ffmpeg/esm/worker.js에서 로딩됩니다.
+  // core/wasm 파일도 /vendor/core/umd 아래의 같은 origin 파일을 blob URL로 변환해 사용합니다.
+  const coreBaseURL='/vendor/core/umd';
 
   const withTimeout=(promise, ms, label)=>Promise.race([
     promise,
@@ -719,11 +731,11 @@ async function loadFfmpeg(){
 
   const loadingPromise=(async()=>{
     const { toBlobURL } = window.ffmpegState;
-    if(!toBlobURL) throw new Error('@ffmpeg/util 모듈 로딩에 실패했습니다. CDN 접속 또는 브라우저 캐시를 확인하세요.');
+    if(!toBlobURL) throw new Error('@ffmpeg/util 로컬 모듈 로딩에 실패했습니다. /vendor/util/esm/index.js 파일 배포 여부를 확인하세요.');
 
-    setStatus('ffmpeg 엔진 다운로드 시작... (최초 1회, 약 31MB)');
+    setStatus('ffmpeg 엔진 로딩 시작... (최초 1회, 약 31MB / Vercel에 같이 배포된 파일 사용)');
 
-    // 공식 권장 방식: coreURL/wasmURL을 blob URL로 변환해 CORS/Worker import 문제를 줄입니다.
+    // coreURL/wasmURL은 같은 origin의 정적 파일을 blob URL로 변환해 로딩합니다.
     const [coreURL, wasmURL] = await withTimeout(Promise.all([
       toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
       toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm')

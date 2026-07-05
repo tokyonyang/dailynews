@@ -170,3 +170,16 @@
 - 브리핑 원문에서 `#`, `##`, `**`, `---`, 링크, 출처 표기 등 마크다운 요소를 제거합니다.
 - 원문을 그대로 잘라 붙이지 않고 장표별 키워드 기준으로 핵심 문장만 추출합니다.
 - 내레이션 시작 문장을 자연어로 정리합니다.
+
+
+## ffmpeg.wasm 배포 주의
+
+이 패키지는 `@ffmpeg/ffmpeg`를 CDN에서 직접 import하지 않고, Vercel 빌드 단계에서 `node_modules`의 ffmpeg 파일을 `/vendor` 폴더로 복사합니다.
+
+Vercel 배포 로그에서 다음 문구가 보여야 정상입니다.
+
+```text
+ffmpeg.wasm vendor files copied to /vendor
+```
+
+배포 후 브라우저 개발자도구 Network에서 `/vendor/ffmpeg/esm/worker.js`, `/vendor/core/umd/ffmpeg-core.wasm`가 200으로 로딩되는지 확인하세요.
