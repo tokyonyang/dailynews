@@ -1,3 +1,10 @@
+// 한국어 자연스러움 순서: Neural2 > Wavenet > Standard. Chirp3-HD는 속도 조절(speakingRate)을 지원하지 않아 제외했습니다.
+const ALLOWED_VOICES = new Set([
+  "ko-KR-Neural2-A", "ko-KR-Neural2-B", "ko-KR-Neural2-C",
+  "ko-KR-Wavenet-A", "ko-KR-Wavenet-B", "ko-KR-Wavenet-C", "ko-KR-Wavenet-D",
+  "ko-KR-Standard-A", "ko-KR-Standard-B", "ko-KR-Standard-C", "ko-KR-Standard-D"
+]);
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).send("Method Not Allowed");
@@ -5,52 +12,51 @@ export default async function handler(req, res) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GOOGLE_TTS_API_KEY;
     if (!apiKey) {
-      res.status(500).send("OPENAI_API_KEY 환경변수가 설정되어 있지 않습니다.");
+      res.status(500).send("GOOGLE_TTS_API_KEY 환경변수가 설정되어 있지 않습니다.");
       return;
     }
 
-    const { input, model, voice, instructions, speed } = req.body || {};
+    const { input, voice, speed } = req.body || {};
     if (!input || typeof input !== "string") {
       res.status(400).send("input 값이 필요합니다.");
       return;
     }
 
-    const allowedModels = new Set(["gpt-4o-mini-tts", "tts-1", "tts-1-hd"]);
-    const selectedModel = allowedModels.has(model) ? model : "gpt-4o-mini-tts";
+    const selectedVoice = ALLOWED_VOICES.has(voice) ? voice : "ko-KR-Neural2-A";
 
     const parsedSpeed = parseFloat(speed);
-    const selectedSpeed = Number.isFinite(parsedSpeed) ? Math.min(4.0, Math.max(0.25, parsedSpeed)) : 1.0;
+    const speakingRate = Number.isFinite(parsedSpeed) ? Math.min(4.0, Math.max(0.25, parsedSpeed)) : 1.0;
 
     const payload = {
-      model: selectedModel,
-      voice: voice || "marin",
-      input: input.slice(0, 4000),
-      response_format: "mp3",
-      speed: selectedSpeed
+      input: { text: input.slice(0, 5000) },
+      voice: { languageCode: "ko-KR", name: selectedVoice },
+      audioConfig: { audioEncoding: "MP3", speakingRate, pitch: 0 }
     };
 
-    if (instructions && selectedModel === "gpt-4o-mini-tts") {
-      payload.instructions = instructions.slice(0, 800);
-    }
+    const googleRes = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }
+    );
 
-    const openaiRes = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!openaiRes.ok) {
-      const errorText = await openaiRes.text();
-      res.status(openaiRes.status).send(errorText);
+    if (!googleRes.ok) {
+      const errorText = await googleRes.text();
+      res.status(googleRes.status).send(errorText);
       return;
     }
 
-    const audioBuffer = Buffer.from(await openaiRes.arrayBuffer());
+    const data = await googleRes.json();
+    if (!data.audioContent) {
+      res.status(502).send("음성 생성 응답에 audioContent가 없습니다.");
+      return;
+    }
+
+    const audioBuffer = Buffer.from(data.audioContent, "base64");
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Content-Disposition", "inline; filename=goodday24news_tts.mp3");
     res.setHeader("Cache-Control", "no-store");
