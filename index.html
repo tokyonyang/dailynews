@@ -96,12 +96,12 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 
 <div class="bulk">
 <label>브리핑 원문 붙여넣기</label>
-<textarea id="briefingInput" placeholder="오늘 브리핑 원문을 붙여넣고 [원문으로 6장 스크립트 자동 구성]을 누르세요."></textarea>
+<textarea id="briefingInput" placeholder="오늘 브리핑 원문을 붙여넣고 [AI로 6장 스크립트 생성]을 누르세요."></textarea>
 <div class="controls" style="grid-template-columns:1fr 1fr">
-<button onclick="autoBuildFromBriefing()">원문으로 6장 스크립트 자동 구성</button>
+<button onclick="autoBuildFromBriefing()">AI로 6장 스크립트 생성</button>
 <button class="secondary" onclick="clearAudios()">생성 음성 초기화</button>
 </div>
-<div class="small">MP4 생성 전: 이미지 업로드 → 전체 MP3 생성 → MP4 생성 순서가 가장 안정적입니다.</div>
+<div class="small">AI 생성이 실패하면 자동으로 기존 규칙 기반 방식으로 대체합니다. MP4 생성 전: 스크립트 생성 → 이미지 생성 → 전체 MP3 생성 → MP4 생성 순서가 가장 안정적입니다.</div>
 </div>
 
 <div class="slides" id="slides"></div>
@@ -140,6 +140,7 @@ function renderEditors(){
       </div>
       <div class="row">
         <input type="text" value="${esc(slide.title)}" onchange="slides[${idx}].title=this.value;renderAll()">
+        <input type="text" value="${esc(slide.screenDescription||'')}" placeholder="화면 설명(AI 이미지 생성용 컨셉)" onchange="slides[${idx}].screenDescription=this.value">
         <textarea onchange="slides[${idx}].script=this.value;slides[${idx}].audioUrl='';renderAll()">${esc(slide.script)}</textarea>
         <input type="text" value="${esc(slide.caption)}" onchange="slides[${idx}].caption=this.value;renderAll()" placeholder="짧은 자막">
         <div class="audio-row">
@@ -181,7 +182,7 @@ function buildTopicVisualConcept(slide){
 }
 
 function buildImagePrompt(slide){
-  const concept=buildTopicVisualConcept(slide);
+  const concept=(slide.screenDescription&&slide.screenDescription.trim())||buildTopicVisualConcept(slide);
   const style=($('imageStyle')&&$('imageStyle').value.trim())||'다크 네이비 배경, 미니멀 벡터 아이콘과 그래픽, 네온 하늘색·노란색·빨간색 포인트 컬러';
   return `한국 경제·시사 뉴스 카드뉴스용 배경 일러스트레이션. 주제: ${concept}. 스타일: ${style}. `
     + `절대 지켜야 할 규칙: 이미지 안에 글자, 숫자, 문장, 로고, 워터마크를 어떤 형태로도 넣지 않습니다. `
@@ -330,10 +331,7 @@ function buildHeadline(raw){
   return parts.slice(0,3).join(' ');
 }
 
-function autoBuildFromBriefing(){
-  const raw=$('briefingInput').value.trim();
-  if(!raw){alert('브리핑 원문을 먼저 붙여넣어주세요.');return}
-
+function autoBuildFromBriefingLocal(raw){
   const headline=buildHeadline(raw);
 
   const topicDefs=[
@@ -389,7 +387,35 @@ function autoBuildFromBriefing(){
 
   applyOutroToLastSlide();
   renderAll();
-  setStatus('마크다운 제거 및 자연어 변환 완료');
+  setStatus('규칙 기반 스크립트 구성 완료 (AI 생성 실패 시 대체 결과)');
+}
+
+async function autoBuildFromBriefing(){
+  const raw=$('briefingInput').value.trim();
+  if(!raw){alert('브리핑 원문을 먼저 붙여넣어주세요.');return}
+
+  setStatus('AI가 6장 스크립트를 작성하는 중... (10~30초 소요)');
+  try{
+    const res=await fetch('/api/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({briefing:raw})});
+    if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
+    const data=await res.json();
+    if(!data.slides || !Array.isArray(data.slides) || data.slides.length===0) throw new Error('AI 응답에 slides가 없습니다.');
+
+    slides=data.slides.map(s=>({
+      title:String(s.title||'').trim(),
+      screenDescription:String(s.screenDescription||'').trim(),
+      script:String(s.script||'').trim(),
+      caption:String(s.caption||'').trim()
+    }));
+    applyOutroToLastSlide();
+    currentIndex=0;
+    renderAll();
+    setStatus(`AI 스크립트 생성 완료 (${slides.length}장)`);
+  }catch(err){
+    console.error(err);
+    setStatus('AI 스크립트 생성 실패, 규칙 기반 방식으로 대체합니다: '+err.message);
+    autoBuildFromBriefingLocal(raw);
+  }
 }
 
 const OUTRO_URL='https://gooddaynews.store';

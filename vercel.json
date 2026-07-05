@@ -6,6 +6,9 @@
     "api/image.js": {
       "maxDuration": 60
     },
+    "api/script.js": {
+      "maxDuration": 60
+    },
     "api/youtube-token.js": {
       "maxDuration": 15
     }
