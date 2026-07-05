@@ -11,6 +11,9 @@
     },
     "api/youtube-token.js": {
       "maxDuration": 15
+    },
+    "api/telegram.js": {
+      "maxDuration": 15
     }
   },
   "headers": [

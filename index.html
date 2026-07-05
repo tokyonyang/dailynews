@@ -53,6 +53,7 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <div class="settings">
 <div><label>OpenAI TTS 모델</label><select id="model"><option>gpt-4o-mini-tts</option><option>tts-1</option><option>tts-1-hd</option></select></div>
 <div><label>음성</label><select id="voice"><option>marin</option><option>cedar</option><option>coral</option><option>alloy</option><option>ash</option><option>ballad</option><option>echo</option><option>fable</option><option>nova</option><option>onyx</option><option>sage</option><option>shimmer</option><option>verse</option></select></div>
+<div><label>TTS 속도(쇼츠 40초 맞출 때 조절)</label><select id="ttsSpeed" onchange="renderAll()"><option value="1.0">1.0배(기본)</option><option value="1.1">1.1배</option><option value="1.15" selected>1.15배</option><option value="1.2">1.2배</option><option value="1.3">1.3배</option><option value="1.4">1.4배</option><option value="1.5">1.5배</option></select></div>
 <div><label>영상 비율</label><select id="ratio"><option value="square">1:1 인스타 카드</option><option value="vertical" selected>9:16 쇼츠/릴스</option><option value="wide">16:9 유튜브</option></select></div>
 <div><label>자막/브랜드</label><select id="burnCaption"><option value="yes">영상에 하단 자막 포함</option><option value="no">원본 이미지만 사용</option></select></div>
 <div><label>AI 카드뉴스 이미지 품질</label><select id="imageQuality"><option value="medium" selected>medium (권장)</option><option value="low">low (빠름/저비용)</option><option value="high">high (고품질/느림)</option><option value="auto">auto</option></select></div>
@@ -60,7 +61,8 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <div style="grid-column:1/-1"><label>낭독 지시문</label><input id="instructions" value="한국어 뉴스 앵커처럼 또렷하고 빠르게, 카드뉴스 쇼츠용으로 신뢰감 있게 읽어줘. 숫자는 자연스럽게 읽고 과장된 감정은 피합니다."></div>
 <div style="grid-column:1/-1"><label>AI 이미지 스타일 지시문</label><input id="imageStyle" value="다크 네이비 배경, 미니멀 벡터 아이콘과 그래픽, 네온 하늘색·노란색·빨간색 포인트 컬러, 고급스러운 금융/테크 뉴스 무드, 여백이 넉넉한 구도"></div>
 </div>
-<div class="small" style="margin-top:14px;padding:10px 12px;background:rgba(32,214,255,.08);border-radius:10px">
+<div class="small" id="totalDurationInfo" style="margin-top:14px;padding:10px 12px;background:rgba(255,157,27,.1);border-radius:10px;font-weight:800"></div>
+<div class="small" style="margin-top:10px;padding:10px 12px;background:rgba(32,214,255,.08);border-radius:10px">
 마무리 문구(마지막 장표 자동 삽입): <b>더욱 자세한 뉴스 확인은 <a href="https://gooddaynews.store" target="_blank" style="color:#20d6ff">https://gooddaynews.store</a> 에서 확인하세요</b><br>
 ※ MP4 영상 픽셀 안의 링크는 클릭할 수 없습니다. 실제 클릭되는 링크는 아래 유튜브 설명란, 인스타그램 프로필 링크, 블로그 본문에 넣어야 합니다.
 </div>
@@ -96,13 +98,15 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 
 <div class="bulk">
 <label>브리핑 원문 붙여넣기</label>
-<textarea id="briefingInput" placeholder="오늘 브리핑 원문을 붙여넣고 [AI로 스크립트 생성]을 누르세요."></textarea>
-<div class="controls" style="grid-template-columns:130px 1fr 1fr">
+<textarea id="briefingInput" placeholder="오늘 브리핑 원문을 붙여넣거나, [텔레그램에서 가져오기]를 눌러 자동으로 채우세요."></textarea>
+<div class="controls" style="grid-template-columns:1fr 110px 110px 1fr 1fr">
+<button class="secondary" onclick="fetchFromTelegram()">텔레그램에서 가져오기</button>
 <select id="slideCount"><option value="6" selected>6장</option><option value="7">7장</option><option value="8">8장</option></select>
+<select id="targetSeconds"><option value="30">30초</option><option value="40" selected>40초</option><option value="50">50초</option><option value="60">60초</option></select>
 <button onclick="autoBuildFromBriefing()">AI로 스크립트 생성</button>
 <button class="secondary" onclick="clearAudios()">생성 음성 초기화</button>
 </div>
-<div class="small">이슈가 많은 날은 7~8장까지 늘릴 수 있습니다. 오늘 다룰 이슈가 적으면 AI가 요청한 장표 수보다 적게 만들 수도 있습니다. AI 생성이 실패하면 자동으로 기존 규칙 기반 방식으로 대체합니다. MP4 생성 전: 스크립트 생성 → 이미지 생성 → 전체 MP3 생성 → MP4 생성 순서가 가장 안정적입니다.</div>
+<div class="small">목표 길이가 짧을수록(30~40초) 장표당 내레이션이 한 문장 수준으로 짧아집니다. 이슈를 깊이 다루고 싶으면 목표 길이를 60초로, 장표 수를 6장으로 두는 걸 권장합니다. AI 생성이 실패하면 자동으로 기존 규칙 기반 방식으로 대체됩니다. MP4 생성 전: 스크립트 생성 → 이미지 생성 → 전체 MP3 생성 → MP4 생성 순서가 가장 안정적입니다.</div>
 </div>
 
 <div class="slides" id="slides"></div>
@@ -124,7 +128,19 @@ const $=id=>document.getElementById(id);
 const slidesEl=$('slides'), preview=$('preview'), currentTitle=$('currentTitle'), currentScript=$('currentScript'), currentCaption=$('currentCaption'), progressBar=$('progressBar'), currentAudio=$('currentAudio'), statusEl=$('status'), output=$('output');
 
 function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function estimateSeconds(text){return Math.max(4,Math.ceil(String(text||'').replace(/\s+/g,'').length/5.2))}
+function estimateSeconds(text){
+  const speed=parseFloat($('ttsSpeed')?.value)||1;
+  return Math.max(3,Math.ceil((String(text||'').replace(/\s+/g,'').length/5.2)/speed));
+}
+function updateTotalDurationInfo(){
+  const el=$('totalDurationInfo');
+  if(!el) return;
+  const total=slides.reduce((sum,s)=>sum+estimateSeconds(s.script)+0.4,0);
+  const totalRounded=Math.round(total);
+  const shortsOk=totalRounded<=60;
+  el.textContent=`예상 총 길이: 약 ${totalRounded}초 (장표 ${slides.length}개, 전환 여유 포함) — 쇼츠 기준 60초 ${shortsOk?'이내입니다 ✓':'초과! TTS 속도를 올리거나 스크립트를 줄이세요'}`;
+  el.style.background = shortsOk ? 'rgba(62,229,140,.12)' : 'rgba(255,91,91,.12)';
+}
 function setStatus(msg){statusEl.textContent='상태: '+msg}
 function renderEditors(){
   slidesEl.innerHTML='';
@@ -163,7 +179,7 @@ function renderPreview(){
   if(s.audioUrl){currentAudio.src=s.audioUrl;currentAudio.style.display='block'}else{currentAudio.removeAttribute('src');currentAudio.style.display='none'}
   progressBar.style.width=((currentIndex+1)/slides.length*100)+'%';
 }
-function renderAll(){renderPreview();renderEditors()}
+function renderAll(){renderPreview();renderEditors();updateTotalDurationInfo()}
 function handleSingleUpload(e,idx){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;slides[idx].imageSource='upload';currentIndex=idx;renderAll()};r.readAsDataURL(f)}
 function handleBulkUpload(e){Array.from(e.target.files).slice(0,slides.length).forEach((f,idx)=>{const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;slides[idx].imageSource='upload';renderAll()};r.readAsDataURL(f)})}
 function clearSlideImage(idx){slides[idx].image='';slides[idx].imageSource='';renderAll();setStatus(`${idx+1}장 업로드 이미지 제거 완료 (다시 AI 생성 가능)`)}
@@ -228,7 +244,7 @@ async function generateAudioForIndex(idx){
   setStatus(`${idx+1}장 MP3 생성 중...`);
   try{
     const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      input:slide.script, model:$('model').value, voice:$('voice').value, instructions:$('instructions').value
+      input:slide.script, model:$('model').value, voice:$('voice').value, instructions:$('instructions').value, speed:$('ttsSpeed').value
     })});
     if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
     const blob=await res.blob();
@@ -422,9 +438,24 @@ function autoBuildFromBriefingLocal(raw, slideCount){
     return {title:t.title, script:naturalizeScript(t.prefix, body, t.fallback), caption:t.cap};
   });
 
+  const targetSeconds=parseInt($('targetSeconds')?.value,10)||40;
+  const speed=parseFloat($('ttsSpeed')?.value)||1.15;
+  const overhead=0.4*slides.length;
+  const perSlideChars=Math.max(20,Math.round((Math.max(slides.length*2,targetSeconds-overhead)/slides.length)*5.2*speed));
+  slides.forEach(s=>{ s.script=trimToBudget(s.script, perSlideChars); });
+
   applyOutroToLastSlide();
   renderAll();
-  setStatus(`규칙 기반 스크립트 구성 완료 (${slides.length}장, AI 생성 실패 시 대체 결과)`);
+  setStatus(`규칙 기반 스크립트 구성 완료 (${slides.length}장, 장표당 약 ${perSlideChars}자 목표, AI 생성 실패 시 대체 결과)`);
+}
+
+function trimToBudget(text, budget){
+  const t=String(text||'').trim();
+  if(t.length<=budget) return t;
+  const cut=t.slice(0,budget);
+  const lastBreak=Math.max(cut.lastIndexOf('. '),cut.lastIndexOf('다. '),cut.lastIndexOf('요. '));
+  const trimmed=(lastBreak>budget*0.5?cut.slice(0,lastBreak+1):cut).trim();
+  return /[.!?다요]$/.test(trimmed)?trimmed:trimmed.replace(/[,\s]+$/,'')+'.';
 }
 
 function getRequestedSlideCount(){
@@ -433,14 +464,32 @@ function getRequestedSlideCount(){
   return Math.min(8,Math.max(5,v||6));
 }
 
+async function fetchFromTelegram(){
+  setStatus('텔레그램에서 최신 메시지를 가져오는 중...');
+  try{
+    const res=await fetch('/api/telegram',{method:'POST'});
+    if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
+    const data=await res.json();
+    if(!data.text){ throw new Error('가져온 메시지에 텍스트가 없습니다.'); }
+    $('briefingInput').value=data.text;
+    const dateLabel=data.date?new Date(data.date*1000).toLocaleString('ko-KR'):'';
+    setStatus(`텔레그램 메시지를 가져왔습니다${data.chatTitle?` (${data.chatTitle})`:''}${dateLabel?` · ${dateLabel}`:''}`);
+  }catch(err){
+    console.error(err); setStatus('텔레그램 메시지 가져오기 실패: '+err.message);
+    alert('텔레그램에서 메시지를 가져오지 못했습니다.\n\n'+err.message+'\n\nVercel 환경변수 TELEGRAM_BOT_TOKEN(및 선택적으로 TELEGRAM_CHAT_ID)을 확인하세요.');
+  }
+}
+
 async function autoBuildFromBriefing(){
   const raw=$('briefingInput').value.trim();
   if(!raw){alert('브리핑 원문을 먼저 붙여넣어주세요.');return}
   const slideCount=getRequestedSlideCount();
+  const targetSeconds=parseInt($('targetSeconds')?.value,10)||40;
+  const speed=parseFloat($('ttsSpeed')?.value)||1.15;
 
-  setStatus(`AI가 최대 ${slideCount}장 스크립트를 작성하는 중... (10~30초 소요)`);
+  setStatus(`AI가 약 ${targetSeconds}초 분량, 최대 ${slideCount}장 스크립트를 작성하는 중... (10~30초 소요)`);
   try{
-    const res=await fetch('/api/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({briefing:raw, slideCount})});
+    const res=await fetch('/api/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({briefing:raw, slideCount, targetSeconds, speed})});
     if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
     const data=await res.json();
     if(!data.slides || !Array.isArray(data.slides) || data.slides.length===0) throw new Error('AI 응답에 slides가 없습니다.');
@@ -454,7 +503,7 @@ async function autoBuildFromBriefing(){
     applyOutroToLastSlide();
     currentIndex=0;
     renderAll();
-    setStatus(`AI 스크립트 생성 완료 (${slides.length}장)`);
+    setStatus(`AI 스크립트 생성 완료 (${slides.length}장, 예상 ${Math.round(slides.reduce((sum,s)=>sum+estimateSeconds(s.script)+0.4,0))}초)`);
   }catch(err){
     console.error(err);
     setStatus('AI 스크립트 생성 실패, 규칙 기반 방식으로 대체합니다: '+err.message);
@@ -568,13 +617,17 @@ async function renderMp4(){
     setStatus('영상 조각 합치는 중...');
     await ffmpeg.exec(['-y','-f','concat','-safe','0','-i','list.txt','-c','copy','goodday24news_morning_briefing.mp4']);
     const data=await ffmpeg.readFile('goodday24news_morning_briefing.mp4');
+    if(!data || !data.length){ throw new Error('생성된 MP4 파일 크기가 0바이트입니다. 브라우저 메모리 부족이거나 ffmpeg 처리 중 오류가 있었을 수 있습니다.'); }
     const blob=new Blob([data.buffer],{type:'video/mp4'});
     window.lastMp4Blob=blob;
     const url=URL.createObjectURL(blob);
-    output.innerHTML=`<a href="${url}" download="goodday24news_morning_briefing.mp4">MP4 다운로드</a><video src="${url}" controls style="width:100%;margin-top:12px;border-radius:14px"></video>`;
-    setStatus('MP4 생성 완료');
+    output.innerHTML=`<a href="${url}" download="goodday24news_morning_briefing.mp4" id="mp4DownloadLink">MP4 다운로드 (자동으로 시작되지 않으면 클릭)</a><video src="${url}" controls style="width:100%;margin-top:12px;border-radius:14px"></video>`;
+    const autoDownload=document.createElement('a');
+    autoDownload.href=url; autoDownload.download='goodday24news_morning_briefing.mp4';
+    document.body.appendChild(autoDownload); autoDownload.click(); autoDownload.remove();
+    setStatus(`MP4 생성 완료 (${(blob.size/1024/1024).toFixed(1)}MB) — 다운로드가 자동으로 시작됩니다.`);
     fillYoutubeDefaults();
-  }catch(err){console.error(err);setStatus('MP4 생성 오류: '+err.message);alert('MP4 생성 실패\n\n'+err.message+'\n\n브라우저 메모리 부족이면 새로고침 후 1:1 비율 또는 짧은 음성으로 다시 시도하세요.')}
+  }catch(err){console.error(err);setStatus('MP4 생성 오류: '+err.message);alert('MP4 생성 실패\n\n'+err.message+'\n\n브라우저 메모리 부족이면 새로고침 후 1:1 비율, 짧은 스크립트, 또는 TTS 속도를 높여 영상 길이를 줄인 뒤 다시 시도하세요.')}
 }
 
 function fillYoutubeDefaults(){
@@ -641,6 +694,7 @@ window.handleSingleUpload=handleSingleUpload; window.handleBulkUpload=handleBulk
 window.generateAudioForIndex=generateAudioForIndex; window.generateCurrentAudio=generateCurrentAudio; window.generateAllAudio=generateAllAudio;
 window.playAudioIndex=playAudioIndex; window.downloadAudioIndex=downloadAudioIndex; window.playAllAudio=playAllAudio; window.downloadSrt=downloadSrt; window.stopAll=stopAll;
 window.resetScripts=resetScripts; window.clearAudios=clearAudios; window.autoBuildFromBriefing=autoBuildFromBriefing; window.renderMp4=renderMp4;
+window.fetchFromTelegram=fetchFromTelegram;
 window.generateImageForIndex=generateImageForIndex; window.generateAllImages=generateAllImages; window.clearSlideImage=clearSlideImage;
 window.fillYoutubeDefaults=fillYoutubeDefaults; window.uploadToYoutubeShorts=uploadToYoutubeShorts;
 renderAll();
