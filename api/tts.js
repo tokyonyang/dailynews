@@ -47,7 +47,6 @@ export default async function handler(req, res) {
     }
 
     const audioBuffer = Buffer.from(await openaiRes.arrayBuffer());
-
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Content-Disposition", "inline; filename=goodday24news_tts.mp3");
     res.setHeader("Cache-Control", "no-store");

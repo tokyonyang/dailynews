@@ -3,32 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Goodday24news OpenAI TTS 카드뉴스 생성기</title>
+<title>Goodday24news Auto Video Maker</title>
 <style>
 :root{--bg:#061224;--p:#0b1d36;--p2:#102947;--c:#20d6ff;--o:#ff9d1b;--t:#f4f8ff;--m:#a9bdd6;--r:#ff5b5b;--g:#3ee58c}
 *{box-sizing:border-box}body{margin:0;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top right,#12345c 0,var(--bg) 45%,#02070f 100%);color:var(--t)}
-header{padding:24px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(4,12,24,.76);position:sticky;top:0;z-index:9;backdrop-filter:blur(12px)}h1{margin:0 0 6px;font-size:28px;letter-spacing:-.03em}.sub{color:var(--m);font-size:14px;line-height:1.5}
-main{display:grid;grid-template-columns:450px 1fr;gap:20px;padding:20px;max-width:1380px;margin:auto}
+header{padding:24px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(4,12,24,.78);position:sticky;top:0;z-index:9;backdrop-filter:blur(12px)}
+h1{margin:0 0 6px;font-size:28px;letter-spacing:-.03em}.sub{color:var(--m);font-size:14px;line-height:1.5}
+main{display:grid;grid-template-columns:470px 1fr;gap:20px;padding:20px;max-width:1440px;margin:auto}
 .card{background:linear-gradient(180deg,rgba(16,41,71,.96),rgba(7,18,34,.96));border:1px solid rgba(87,173,255,.28);border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.35);overflow:hidden}
 .left{padding:18px;height:fit-content;position:sticky;top:110px}.right{padding:18px}
 .preview{aspect-ratio:1/1;border-radius:16px;background:#081525;display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,.18);overflow:hidden;margin-bottom:16px}.preview img{width:100%;height:100%;object-fit:contain}.placeholder{color:var(--m);text-align:center;padding:20px}
-.slide-title{color:var(--c);font-weight:900;font-size:20px;margin:8px 0}.script-box{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;line-height:1.65;min-height:132px;white-space:pre-wrap}.caption{margin-top:10px;padding:10px 12px;background:rgba(32,214,255,.12);border-left:4px solid var(--c);border-radius:10px;font-weight:800}
+.slide-title{color:var(--c);font-weight:900;font-size:20px;margin:8px 0}.script-box{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;line-height:1.65;min-height:118px;white-space:pre-wrap}.caption{margin-top:10px;padding:10px 12px;background:rgba(32,214,255,.12);border-left:4px solid var(--c);border-radius:10px;font-weight:800}
 .controls{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}button,.file-label{border:0;border-radius:12px;padding:12px 14px;color:white;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#156bd1,#00b7e8);text-align:center;font-size:14px}button.secondary{background:#1d3352}button.warn{background:linear-gradient(135deg,#e25a00,#ff9d1b)}button.danger{background:linear-gradient(135deg,#b91c1c,#ff5b5b)}button.green{background:linear-gradient(135deg,#08914d,#33cc82)}button:disabled{opacity:.45;cursor:not-allowed}input[type=file]{display:none}
 .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08)}label{color:var(--m);font-size:13px;display:block;margin-bottom:6px}select,input[type=range],input[type=text]{width:100%}select,input[type=text]{background:#081525;color:white;border:1px solid rgba(255,255,255,.18);padding:10px;border-radius:10px}
 .toolbar{display:grid;grid-template-columns:1fr auto auto;gap:10px;margin-bottom:16px;align-items:center}.brand{font-weight:900;color:var(--c)}.small{color:var(--m);font-size:12px;line-height:1.55}
+.bulk{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:14px;margin-bottom:16px}.bulk textarea{min-height:150px}
 .slides{display:grid;gap:14px}.slide-editor{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:14px;display:grid;grid-template-columns:120px 1fr;gap:14px}.slide-editor.active{border-color:var(--c);box-shadow:0 0 0 2px rgba(32,214,255,.12)}
 .thumb{aspect-ratio:1/1;border-radius:12px;background:#07101f;border:1px dashed rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:var(--m);overflow:hidden;font-size:12px;text-align:center;cursor:pointer}.thumb img{width:100%;height:100%;object-fit:cover}
-textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;line-height:1.55;resize:vertical;font-family:inherit;min-height:116px}.row{display:grid;gap:8px}.meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--m);font-size:12px;margin-top:8px}.badge{background:rgba(32,214,255,.12);color:#bdf5ff;padding:5px 8px;border-radius:999px;border:1px solid rgba(32,214,255,.2)}.badge.ok{background:rgba(62,229,140,.12);color:#bafed8;border-color:rgba(62,229,140,.25)}.badge.err{background:rgba(255,91,91,.12);color:#ffd1d1;border-color:rgba(255,91,91,.25)}
-.progress{height:8px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:14px}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--c),var(--o));transition:width .2s}.note{margin-top:14px;color:var(--m);font-size:13px;line-height:1.55}
+textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;line-height:1.55;resize:vertical;font-family:inherit;min-height:110px}.row{display:grid;gap:8px}.meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--m);font-size:12px;margin-top:8px}.badge{background:rgba(32,214,255,.12);color:#bdf5ff;padding:5px 8px;border-radius:999px;border:1px solid rgba(32,214,255,.2)}.badge.ok{background:rgba(62,229,140,.12);color:#bafed8;border-color:rgba(62,229,140,.25)}.badge.err{background:rgba(255,91,91,.12);color:#ffd1d1;border-color:rgba(255,91,91,.25)}
+.progress{height:8px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:14px}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--c),var(--o));transition:width .2s}.note{margin-top:14px;color:var(--m);font-size:13px;line-height:1.55;white-space:pre-wrap}
 .audio-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}audio{width:100%;margin-top:8px}
-.bulk{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:14px;margin-bottom:16px}.bulk textarea{min-height:160px}
-@media(max-width:950px){main{grid-template-columns:1fr}.left{position:static}.toolbar{grid-template-columns:1fr}.slide-editor{grid-template-columns:84px 1fr}header{position:static}}
+.output a{display:block;color:#bdf5ff;font-weight:800;margin-top:8px}
+@media(max-width:980px){main{grid-template-columns:1fr}.left{position:static}.toolbar{grid-template-columns:1fr}.slide-editor{grid-template-columns:84px 1fr}header{position:static}}
 </style>
 </head>
 <body>
 <header>
-<h1>Goodday24news OpenAI TTS 카드뉴스 생성기</h1>
-<div class="sub">브리핑 원문 → 장표별 스크립트 정리 → OpenAI TTS MP3 생성 → 미리듣기/다운로드/SRT 생성</div>
+<h1>Goodday24news Auto Video Maker</h1>
+<div class="sub">카드뉴스 이미지 + OpenAI TTS MP3 + 하단 자막/브랜드 + 마지막 블로그 안내 → MP4 자동 생성</div>
 </header>
 <main>
 <section class="card left">
@@ -43,24 +45,27 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <button class="secondary" onclick="nextSlide()">다음 장표</button>
 <button class="green" onclick="generateCurrentAudio()">현재 MP3 생성</button>
 <button class="warn" onclick="generateAllAudio()">전체 MP3 생성</button>
-<button onclick="playAllAudio()">생성 음성 전체 재생</button>
+<button onclick="playAllAudio()">음성 전체 재생</button>
 <button onclick="downloadSrt()">SRT 다운로드</button>
-<button class="secondary" onclick="downloadCurrentAudio()">현재 MP3 다운로드</button>
+<button class="green" onclick="renderMp4()">MP4 생성</button>
 <button class="danger" onclick="stopAll()">정지</button>
 </div>
 <div class="settings">
 <div><label>OpenAI TTS 모델</label><select id="model"><option>gpt-4o-mini-tts</option><option>tts-1</option><option>tts-1-hd</option></select></div>
 <div><label>음성</label><select id="voice"><option>marin</option><option>cedar</option><option>coral</option><option>alloy</option><option>ash</option><option>ballad</option><option>echo</option><option>fable</option><option>nova</option><option>onyx</option><option>sage</option><option>shimmer</option><option>verse</option></select></div>
+<div><label>영상 비율</label><select id="ratio"><option value="square">1:1 인스타 카드</option><option value="vertical">9:16 쇼츠/릴스</option><option value="wide">16:9 유튜브</option></select></div>
+<div><label>자막/브랜드</label><select id="burnCaption"><option value="yes">영상에 하단 자막 포함</option><option value="no">원본 이미지만 사용</option></select></div>
 <div style="grid-column:1/-1"><label>낭독 지시문</label><input id="instructions" value="한국어 뉴스 앵커처럼 또렷하고 빠르게, 카드뉴스 쇼츠용으로 신뢰감 있게 읽어줘. 숫자는 자연스럽게 읽고 과장된 감정은 피합니다."></div>
 </div>
 <div class="note" id="status">상태: 대기 중</div>
+<div class="output" id="output"></div>
 </section>
 
 <section class="card right">
 <div class="toolbar">
 <div>
 <div class="brand">Instagram @goodday24news</div>
-<div class="small">API 키는 브라우저에 넣지 않고 Vercel 환경변수 <b>OPENAI_API_KEY</b>로만 사용합니다.</div>
+<div class="small">API 키는 Vercel 환경변수 <b>OPENAI_API_KEY</b>로만 사용합니다. MP4는 브라우저 안에서 ffmpeg.wasm으로 생성합니다.</div>
 </div>
 <label class="file-label" for="bulkUpload">이미지 1~6장 업로드</label>
 <input id="bulkUpload" type="file" accept="image/*" multiple onchange="handleBulkUpload(event)">
@@ -74,24 +79,30 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <button onclick="autoBuildFromBriefing()">원문으로 6장 스크립트 자동 구성</button>
 <button class="secondary" onclick="clearAudios()">생성 음성 초기화</button>
 </div>
-<div class="small">현재 자동 구성은 브라우저 내 규칙 기반입니다. 추후 OpenAI 텍스트 생성 API까지 붙이면 더 자연스러운 장표별 대본 생성이 가능합니다.</div>
+<div class="small">MP4 생성 전: 이미지 업로드 → 전체 MP3 생성 → MP4 생성 순서가 가장 안정적입니다.</div>
 </div>
 
 <div class="slides" id="slides"></div>
 </section>
 </main>
 
+<script type="module">
+import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+import { fetchFile, toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
+
+window.ffmpegState = { ffmpeg:null, loaded:false, FFmpeg, fetchFile, toBlobURL };
+</script>
+
 <script>
 const initialSlides = [{"title": "1장. 표지 / 오늘의 핵심 흐름", "script": "오늘 아침 꼭 봐야 할 핵심 이슈입니다. 반도체 변동성 장세, 메타발 AI 과잉투자 논쟁, 동탄·기흥·구리 토지거래허가구역 시작, 그리고 최저임금 협상 교착까지 한 번에 정리합니다.", "caption": "오늘 뉴스, 이 4가지만 보면 됩니다."}, {"title": "2장. 국내 경제·증시", "script": "첫 번째는 국내 증시입니다. 코스피는 메타발 AI 과잉투자 우려로 급락한 뒤, 반도체 대형주 반발 매수로 다시 8,000선을 회복했습니다. 핵심은 수요 둔화 확정이 아니라, 반도체 쏠림 구조 때문에 시장 변동성이 커졌다는 점입니다.", "caption": "반도체 뉴스 하나에 코스피가 출렁입니다."}, {"title": "3장. AI·반도체·빅테크", "script": "두 번째는 AI 반도체 이슈입니다. 메타가 남는 AI 컴퓨팅 자원을 클라우드 사업으로 활용할 수 있다는 보도가 나오면서, 시장은 AI 인프라가 과잉투자된 것 아니냐는 의심을 키웠습니다. 아직 수요 붕괴가 확인된 것은 아니며, 빅테크 전략 변화가 시장 심리를 흔든 단계로 보는 게 안전합니다.", "caption": "AI 서버 부족에서 공급과잉 논쟁으로 바뀌었습니다."}, {"title": "4장. 부동산·정책", "script": "세 번째는 부동산 정책입니다. 동탄구, 기흥구, 구리시는 규제지역에 이어 토지거래허가구역 적용이 시작됐습니다. 이제 단순 투자 목적의 매수는 어려워지고, 실거주 의무와 갭투자 차단이 핵심 변화가 됩니다.", "caption": "동탄·기흥·구리, 집 사는 방식이 달라졌습니다."}, {"title": "5장. 국내 핫이슈·사회", "script": "네 번째는 최저임금 협상입니다. 노동계는 1만 1,700원, 경영계는 1만 410원을 제시하며 격차는 1,290원으로 남아 있습니다. 최저임금은 근로자에게는 생계비 문제이고, 자영업자에게는 고정비 문제입니다.", "caption": "최저임금은 월급이자 가게 운영비입니다."}, {"title": "6장. 오늘의 콘텐츠 포인트", "script": "오늘 콘텐츠 소재로는 두 가지가 가장 좋습니다. 첫째, 메타발 쇼크가 AI 반도체 공급과잉 논쟁으로 번진 이유. 둘째, 동탄·기흥·구리 토허제 시작으로 집을 사는 방식이 어떻게 달라지는지입니다. 오늘 뉴스는 단순 속보보다 왜 시장이 흔들렸는가와 내 생활에 무엇이 달라지는가를 중심으로 보면 좋습니다.", "caption": "오늘의 핵심 소재는 AI 반도체와 부동산 규제입니다."}];
 let slides = JSON.parse(JSON.stringify(initialSlides));
 let currentIndex=0, playing=false;
 const $=id=>document.getElementById(id);
-const slidesEl=$('slides'), preview=$('preview'), currentTitle=$('currentTitle'), currentScript=$('currentScript'), currentCaption=$('currentCaption'), progressBar=$('progressBar'), currentAudio=$('currentAudio'), statusEl=$('status');
+const slidesEl=$('slides'), preview=$('preview'), currentTitle=$('currentTitle'), currentScript=$('currentScript'), currentCaption=$('currentCaption'), progressBar=$('progressBar'), currentAudio=$('currentAudio'), statusEl=$('status'), output=$('output');
 
 function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function estimateSeconds(text){return Math.max(4,Math.ceil(String(text||'').replace(/\s+/g,'').length/5.2))}
 function setStatus(msg){statusEl.textContent='상태: '+msg}
-
 function renderEditors(){
   slidesEl.innerHTML='';
   slides.forEach((slide,idx)=>{
@@ -116,7 +127,6 @@ function renderEditors(){
     slidesEl.appendChild(wrap);
   });
 }
-
 function renderPreview(){
   const s=slides[currentIndex];
   currentTitle.textContent=s.title; currentScript.textContent=s.script; currentCaption.textContent=s.caption;
@@ -125,7 +135,6 @@ function renderPreview(){
   progressBar.style.width=((currentIndex+1)/slides.length*100)+'%';
 }
 function renderAll(){renderPreview();renderEditors()}
-
 function handleSingleUpload(e,idx){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;currentIndex=idx;renderAll()};r.readAsDataURL(f)}
 function handleBulkUpload(e){Array.from(e.target.files).slice(0,slides.length).forEach((f,idx)=>{const r=new FileReader();r.onload=()=>{slides[idx].image=r.result;renderAll()};r.readAsDataURL(f)})}
 function prevSlide(){currentIndex=Math.max(0,currentIndex-1);renderAll()} function nextSlide(){currentIndex=Math.min(slides.length-1,currentIndex+1);renderAll()}
@@ -136,58 +145,31 @@ async function generateAudioForIndex(idx){
   setStatus(`${idx+1}장 MP3 생성 중...`);
   try{
     const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      input:slide.script,
-      model:$('model').value,
-      voice:$('voice').value,
-      instructions:$('instructions').value
+      input:slide.script, model:$('model').value, voice:$('voice').value, instructions:$('instructions').value
     })});
     if(!res.ok){ const txt=await res.text(); throw new Error(txt||res.statusText); }
     const blob=await res.blob();
     if(slide.audioUrl) URL.revokeObjectURL(slide.audioUrl);
-    slide.audioBlob=blob;
-    slide.audioUrl=URL.createObjectURL(blob);
-    currentIndex=idx;
-    setStatus(`${idx+1}장 MP3 생성 완료`);
-    renderAll();
-  }catch(err){
-    console.error(err);
-    setStatus('오류: '+err.message);
-    alert('OpenAI TTS 생성 실패\n\n'+err.message+'\n\nVercel 환경변수 OPENAI_API_KEY 설정을 확인하세요.');
-  }
+    slide.audioBlob=blob; slide.audioUrl=URL.createObjectURL(blob);
+    currentIndex=idx; setStatus(`${idx+1}장 MP3 생성 완료`); renderAll();
+  }catch(err){console.error(err);setStatus('오류: '+err.message);alert('OpenAI TTS 생성 실패\n\n'+err.message+'\n\nVercel 환경변수 OPENAI_API_KEY 설정을 확인하세요.')}
 }
 function generateCurrentAudio(){return generateAudioForIndex(currentIndex)}
-async function generateAllAudio(){
-  for(let i=0;i<slides.length;i++){ await generateAudioForIndex(i); }
-  setStatus('전체 MP3 생성 완료');
-}
+async function generateAllAudio(){for(let i=0;i<slides.length;i++){await generateAudioForIndex(i)}setStatus('전체 MP3 생성 완료')}
 function playAudioIndex(idx){currentIndex=idx;renderAll();setTimeout(()=>currentAudio.play(),100)}
 function playAllAudio(){playing=true;let i=0;const playNext=()=>{if(!playing||i>=slides.length){playing=false;return}; if(!slides[i].audioUrl){i++;playNext();return}; currentIndex=i;renderAll(); currentAudio.onended=()=>{i++;setTimeout(playNext,500)}; currentAudio.play();};playNext()}
 function stopAll(){playing=false;currentAudio.pause();currentAudio.currentTime=0;setStatus('정지')}
 function downloadAudioIndex(idx){const s=slides[idx]; if(!s.audioUrl)return; const a=document.createElement('a'); a.href=s.audioUrl; a.download=`goodday24news_slide_${String(idx+1).padStart(2,'0')}.mp3`; a.click()}
-function downloadCurrentAudio(){downloadAudioIndex(currentIndex)}
 function clearAudios(){slides.forEach(s=>{if(s.audioUrl)URL.revokeObjectURL(s.audioUrl);s.audioUrl='';s.audioBlob=null});renderAll();setStatus('생성 음성 초기화 완료')}
 
 function secToSrtTime(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60),ms=Math.floor((sec-Math.floor(sec))*1000);return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`}
 function downloadSrt(){let now=0,srt='';slides.forEach((sl,i)=>{const d=estimateSeconds(sl.script);srt+=`${i+1}\n${secToSrtTime(now)} --> ${secToSrtTime(now+d)}\n${sl.caption||sl.script}\n\n`;now+=d+.4});const blob=new Blob([srt],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='goodday24news_morning_briefing.srt';a.click();URL.revokeObjectURL(a.href)}
 
 function resetScripts(){slides=JSON.parse(JSON.stringify(initialSlides));renderAll();setStatus('오늘 예시로 초기화 완료')}
-
-function findSection(text, keys){
-  const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-  const hit=[];
-  let cap=false;
-  for(const l of lines){
-    const hasKey=keys.some(k=>l.includes(k));
-    if(hasKey) cap=true;
-    if(cap) hit.push(l);
-    if(cap && hit.length>=8) break;
-  }
-  return hit.join(' ');
-}
-function short(s,n=190){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n).replace(/[,.;:，。]\s*$/,'')+'...':s}
+function findSection(text, keys){const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);const hit=[];let cap=false;for(const l of lines){const hasKey=keys.some(k=>l.includes(k));if(hasKey) cap=true;if(cap) hit.push(l);if(cap && hit.length>=8) break}return hit.join(' ')}
+function short(s,n=220){s=String(s||'').replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n).replace(/[,.;:，。]\s*$/,'')+'...':s}
 function autoBuildFromBriefing(){
-  const raw=$('briefingInput').value.trim();
-  if(!raw){alert('브리핑 원문을 먼저 붙여넣어주세요.');return}
+  const raw=$('briefingInput').value.trim(); if(!raw){alert('브리핑 원문을 먼저 붙여넣어주세요.');return}
   const topics=[
     {title:'1장. 표지 / 오늘의 핵심 흐름',keys:['핵심 흐름','오늘의 핵심','아침 브리핑'],prefix:'오늘 아침 꼭 봐야 할 핵심 이슈입니다.',cap:'오늘 뉴스, 이 흐름만 보면 됩니다.'},
     {title:'2장. 국내 경제·증시',keys:['국내 경제','증시','코스피','코스닥','환율'],prefix:'첫 번째는 국내 경제와 증시입니다.',cap:'오늘 증시의 핵심 변수를 확인하세요.'},
@@ -199,6 +181,109 @@ function autoBuildFromBriefing(){
   slides=topics.map(t=>{let body=findSection(raw,t.keys); if(!body) body=raw; return {title:t.title, script: t.prefix+' '+short(body,230), caption:t.cap}});
   renderAll();setStatus('브리핑 원문 기반 6장 스크립트 자동 구성 완료');
 }
+
+function getSize(){const r=$('ratio').value; if(r==='vertical') return [1080,1920]; if(r==='wide') return [1920,1080]; return [1080,1080]}
+function loadImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src})}
+function wrapText(ctx, text, maxWidth, maxLines){
+  const words=String(text||'').split(/\s+/), lines=[]; let line='';
+  for(const w of words){const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){lines.push(line);line=w}else line=test}
+  if(line) lines.push(line);
+  if(lines.length>maxLines){lines.length=maxLines; lines[maxLines-1]=lines[maxLines-1].replace(/\.?$/,'…')}
+  return lines;
+}
+async function createSlidePngBlob(slide, idx){
+  const [W,H]=getSize(); const c=document.createElement('canvas'); c.width=W; c.height=H; const ctx=c.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,W,H); grad.addColorStop(0,'#12345c'); grad.addColorStop(1,'#02070f'); ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  if(slide.image){
+    try{
+      const img=await loadImage(slide.image);
+      const scale=Math.min(W/img.width,H/img.height); const iw=img.width*scale, ih=img.height*scale, x=(W-iw)/2, y=(H-ih)/2;
+      ctx.drawImage(img,x,y,iw,ih);
+    }catch(e){}
+  } else {
+    ctx.fillStyle='#0b1d36'; ctx.fillRect(W*.08,H*.12,W*.84,H*.62);
+    ctx.fillStyle='#20d6ff'; ctx.font=`900 ${Math.floor(W*0.055)}px sans-serif`; ctx.textAlign='center';
+    ctx.fillText(slide.title, W/2, H*.38);
+  }
+  if($('burnCaption').value==='yes'){
+    const boxH = Math.max(170, H*0.16), y=H-boxH;
+    ctx.fillStyle='rgba(2,7,15,.78)'; ctx.fillRect(0,y,W,boxH);
+
+    const isLastSlide = idx === slides.length - 1;
+
+    if(isLastSlide){
+      ctx.fillStyle='#20d6ff';
+      ctx.font=`900 ${Math.floor(W*0.030)}px sans-serif`;
+      ctx.textAlign='left';
+      ctx.fillText('자세한 내용은 goodday100news 블로그에서 확인하세요', W*.055, y+Math.floor(boxH*.42));
+
+      ctx.fillStyle='#ffffff';
+      ctx.font=`900 ${Math.floor(W*0.034)}px sans-serif`;
+      ctx.fillText('https://gooddaynews.store', W*.055, y+Math.floor(boxH*.72));
+    } else {
+      ctx.fillStyle='#20d6ff';
+      ctx.font=`900 ${Math.floor(W*0.024)}px sans-serif`;
+      ctx.textAlign='left';
+      ctx.fillText(`Instagram @goodday24news`, W*.055, y+Math.floor(boxH*.28));
+
+      ctx.fillStyle='#ffffff';
+      ctx.font=`900 ${Math.floor(W*0.038)}px sans-serif`;
+      const lines=wrapText(ctx, slide.caption||slide.title, W*.89, 2);
+      lines.forEach((ln,i)=>ctx.fillText(ln, W*.055, y+Math.floor(boxH*.60)+i*Math.floor(W*.045)));
+    }
+  }
+  return new Promise(resolve=>c.toBlob(resolve,'image/png',.95));
+}
+async function loadFfmpeg(){
+  if(!window.ffmpegState){throw new Error('ffmpeg.wasm 모듈이 아직 로딩되지 않았습니다. 새로고침 후 다시 시도하세요.')}
+  if(window.ffmpegState.loaded) return window.ffmpegState.ffmpeg;
+  setStatus('ffmpeg.wasm 로딩 중... 최초 1회는 시간이 걸립니다.');
+  const {FFmpeg,toBlobURL}=window.ffmpegState;
+  const ffmpeg = new FFmpeg();
+  ffmpeg.on('log', ({message})=>{ if(message) setStatus(message.slice(0,180)); });
+  const baseURL='https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+  });
+  window.ffmpegState.ffmpeg=ffmpeg; window.ffmpegState.loaded=true; return ffmpeg;
+}
+async function renderMp4(){
+  try{
+    output.innerHTML='';
+    const missingAudio=slides.findIndex(s=>!s.audioBlob);
+    if(missingAudio>=0){alert(`${missingAudio+1}장 MP3가 없습니다. 먼저 [전체 MP3 생성]을 실행하세요.`);return}
+    setStatus('MP4 생성 준비 중...');
+    const ffmpeg=await loadFfmpeg();
+    const {fetchFile}=window.ffmpegState;
+    const segs=[];
+    for(let i=0;i<slides.length;i++){
+      currentIndex=i; renderAll();
+      setStatus(`${i+1}장 영상 조각 생성 중...`);
+      const imgBlob=await createSlidePngBlob(slides[i], i);
+      const imgName=`slide_${String(i+1).padStart(2,'0')}.png`;
+      const audName=`audio_${String(i+1).padStart(2,'0')}.mp3`;
+      const segName=`seg_${String(i+1).padStart(2,'0')}.mp4`;
+      await ffmpeg.writeFile(imgName, await fetchFile(imgBlob));
+      await ffmpeg.writeFile(audName, await fetchFile(slides[i].audioBlob));
+      await ffmpeg.exec(['-y','-loop','1','-i',imgName,'-i',audName,'-c:v','libx264','-tune','stillimage','-c:a','aac','-b:a','192k','-pix_fmt','yuv420p','-vf','fps=30,format=yuv420p','-shortest',segName]);
+      segs.push(segName);
+    }
+    const list=segs.map(s=>`file '${s}'`).join('\n');
+    await ffmpeg.writeFile('list.txt', new TextEncoder().encode(list));
+    setStatus('영상 조각 합치는 중...');
+    await ffmpeg.exec(['-y','-f','concat','-safe','0','-i','list.txt','-c','copy','goodday24news_morning_briefing.mp4']);
+    const data=await ffmpeg.readFile('goodday24news_morning_briefing.mp4');
+    const blob=new Blob([data.buffer],{type:'video/mp4'});
+    const url=URL.createObjectURL(blob);
+    output.innerHTML=`<a href="${url}" download="goodday24news_morning_briefing.mp4">MP4 다운로드</a><video src="${url}" controls style="width:100%;margin-top:12px;border-radius:14px"></video>`;
+    setStatus('MP4 생성 완료');
+  }catch(err){console.error(err);setStatus('MP4 생성 오류: '+err.message);alert('MP4 생성 실패\n\n'+err.message+'\n\n브라우저 메모리 부족이면 새로고침 후 1:1 비율 또는 짧은 음성으로 다시 시도하세요.')}
+}
+window.handleSingleUpload=handleSingleUpload; window.handleBulkUpload=handleBulkUpload; window.prevSlide=prevSlide; window.nextSlide=nextSlide;
+window.generateAudioForIndex=generateAudioForIndex; window.generateCurrentAudio=generateCurrentAudio; window.generateAllAudio=generateAllAudio;
+window.playAudioIndex=playAudioIndex; window.downloadAudioIndex=downloadAudioIndex; window.playAllAudio=playAllAudio; window.downloadSrt=downloadSrt; window.stopAll=stopAll;
+window.resetScripts=resetScripts; window.clearAudios=clearAudios; window.autoBuildFromBriefing=autoBuildFromBriefing; window.renderMp4=renderMp4;
 renderAll();
 </script>
 </body></html>
