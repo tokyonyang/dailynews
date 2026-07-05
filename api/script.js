@@ -1,13 +1,18 @@
-const SYSTEM_PROMPT = `당신은 한국 경제·시사 모닝브리핑 카드뉴스 영상의 스크립트 작가입니다.
-사용자가 붙여넣는 "브리핑 원문"을 바탕으로, 아래 6장 구성의 영상 스크립트를 JSON으로만 출력합니다.
+function buildSystemPrompt(slideCount) {
+  const middleCount = slideCount - 2;
+  return `당신은 한국 경제·시사 모닝브리핑 카드뉴스 영상의 스크립트 작가입니다.
+사용자가 붙여넣는 "브리핑 원문"을 바탕으로, 아래 조건에 맞는 영상 스크립트를 JSON으로만 출력합니다.
 
-[6장 구성 - 반드시 이 순서와 주제를 지킬 것]
-1장: 표지 / 오늘의 핵심 흐름 (오늘 다룰 4가지 이슈를 한 문장씩 예고)
-2장: 국내 경제·증시
-3장: AI·반도체·빅테크
-4장: 부동산·정책
-5장: 국내 핫이슈·사회
-6장: 마무리 / 오늘의 콘텐츠 포인트 (블로그·카드뉴스로 확장하기 좋은 소재 정리 + 마무리 안내)
+[전체 장표 수]
+- 총 ${slideCount}장을 목표로 합니다. 1장은 표지, 마지막 ${slideCount}장은 마무리이고, 그 사이 ${middleCount}개 장표(2장~${slideCount - 1}장)는 오늘 브리핑에서 다룰 만한 서로 다른 주요 이슈들로 구성합니다.
+- 중간 이슈 장표는 통상적으로 "국내 경제·증시", "AI·반도체·빅테크", "부동산·정책", "국내 핫이슈·사회" 4가지를 우선적으로 다루되, 요청된 장표 수가 6장보다 많고 브리핑 원문에 이 4가지 외에 뚜렷한 추가 이슈(글로벌 이슈, 특정 기업/산업 뉴스, 정치 이슈 등)가 있다면 그 이슈로 추가 장표를 채우세요.
+- 브리핑 원문에 다룰 만한 내용이 부족하면 억지로 ${slideCount}장을 채우지 말고, 표지+마무리를 포함해 최소 5장 이상으로 자연스러운 개수만큼만 만드세요. 같은 내용을 억지로 쪼개서 장표 수를 늘리지 마세요.
+
+[1장: 표지 / 오늘의 핵심 흐름]
+오늘 다룰 이슈들을 한 문장씩 예고하는 표지 장표입니다.
+
+[마지막 장: 마무리 / 오늘의 콘텐츠 포인트]
+블로그·카드뉴스로 확장하기 좋은 소재 정리 + 마무리 안내.
 
 [각 장표마다 아래 4개 필드를 작성]
 - title: "N장. OO" 형식의 장표 제목
@@ -19,12 +24,13 @@ const SYSTEM_PROMPT = `당신은 한국 경제·시사 모닝브리핑 카드뉴
 - 소구점(독자가 가장 궁금해할 포인트)을 각 장표 script의 앞부분에 배치할 것.
 - 마크다운 기호(#, **, ---, 링크 등)를 절대 쓰지 말 것.
 - "무슨 일이야?"로 끝나는 밋밋한 문장 대신, 왜 중요한지/무엇이 달라지는지까지 전달할 것.
-- 6장(마지막 장)의 script는 오늘 콘텐츠 포인트 요약 뒤에 반드시 다음 문장을 그대로 덧붙일 것: "더욱 자세한 뉴스는 gooddaynews.store 에서 확인하세요."
-- 6장의 caption은 반드시 정확히 이 문자열이어야 함: "더욱 자세한 뉴스 확인은 https://gooddaynews.store 에서 확인하세요"
+- 마지막 장표의 script는 오늘 콘텐츠 포인트 요약 뒤에 반드시 다음 문장을 그대로 덧붙일 것: "더욱 자세한 뉴스는 gooddaynews.store 에서 확인하세요."
+- 마지막 장표의 caption은 반드시 정확히 이 문자열이어야 함: "더욱 자세한 뉴스 확인은 https://gooddaynews.store 에서 확인하세요"
 - 브리핑 원문에 특정 주제의 내용이 없으면, 없는 사실을 지어내지 말고 해당 장표는 "오늘은 관련 소식이 크지 않았다"는 취지로 담백하게 작성할 것.
 - 출력은 아래 JSON 스키마 그대로, 다른 설명이나 코드블록 없이 JSON 객체 하나만 출력할 것.
 
-{"slides":[{"title":"1장. 표지 / 오늘의 핵심 흐름","screenDescription":"...","script":"...","caption":"..."}, ... 총 6개]}`;
+{"slides":[{"title":"1장. 표지 / 오늘의 핵심 흐름","screenDescription":"...","script":"...","caption":"..."}, ... 총 ${slideCount}개 내외]}`;
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -39,11 +45,14 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { briefing, model } = req.body || {};
+    const { briefing, model, slideCount } = req.body || {};
     if (!briefing || typeof briefing !== "string" || !briefing.trim()) {
       res.status(400).send("briefing(브리핑 원문) 값이 필요합니다.");
       return;
     }
+
+    const parsedCount = parseInt(slideCount, 10);
+    const targetCount = Number.isFinite(parsedCount) ? Math.min(8, Math.max(5, parsedCount)) : 6;
 
     const allowedModels = new Set(["gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.5"]);
     const selectedModel = allowedModels.has(model) ? model : "gpt-5.4-mini";
@@ -58,8 +67,8 @@ export default async function handler(req, res) {
         model: selectedModel,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `아래는 오늘의 브리핑 원문입니다. 이 내용을 바탕으로 6장 영상 스크립트 JSON을 작성하세요.\n\n---\n${briefing.slice(0, 12000)}\n---` }
+          { role: "system", content: buildSystemPrompt(targetCount) },
+          { role: "user", content: `아래는 오늘의 브리핑 원문입니다. 이 내용을 바탕으로 최대 ${targetCount}장짜리 영상 스크립트 JSON을 작성하세요.\n\n---\n${briefing.slice(0, 12000)}\n---` }
         ]
       })
     });
@@ -88,6 +97,11 @@ export default async function handler(req, res) {
     if (!parsed || !Array.isArray(parsed.slides) || parsed.slides.length === 0) {
       res.status(502).send("스크립트 생성 응답에 slides 배열이 없습니다.");
       return;
+    }
+
+    // 혹시 모델이 최대 장표 수를 초과해서 만들었을 경우를 대비한 안전장치
+    if (parsed.slides.length > targetCount) {
+      parsed.slides = parsed.slides.slice(0, targetCount);
     }
 
     res.status(200).json(parsed);
