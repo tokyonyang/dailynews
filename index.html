@@ -134,7 +134,7 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 </main>
 
 <script type="module">
-import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
 
 window.ffmpegState = { ffmpeg:null, loaded:false, loadingPromise:null, FFmpeg };
 </script>
@@ -698,8 +698,11 @@ async function loadFfmpeg(){
   const ffmpeg = new FFmpeg();
   ffmpeg.on('log', ({message})=>{ if(message) setStatus(message.slice(0,180)); });
 
-  const coreBaseURL='https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-  const ffmpegPkgBaseURL='https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+  // ffmpeg.wasm 0.12 계열은 브라우저 Worker 파일 경로가 깨지면 load()가 끝나지 않고 멈출 수 있습니다.
+  // 그래서 core/ffmpeg 버전을 0.12.10으로 맞추고, classWorker는 의존성이 묶여 있는 UMD worker 번들을 사용합니다.
+  // jsDelivr가 한국/브라우저 캐시에서 unpkg보다 안정적인 경우가 많아 기본 CDN도 jsDelivr로 바꿉니다.
+  const coreBaseURL='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+  const ffmpegClassWorkerURL='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js';
 
   const progress={core:0,wasm:0,worker:0};
   const totals={core:0,wasm:0,worker:0};
@@ -722,7 +725,7 @@ async function loadFfmpeg(){
 
   const withTimeout=(promise, ms, label)=>Promise.race([
     promise,
-    new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} 다운로드가 ${ms/1000}초 넘게 응답이 없습니다. 네트워크 상태를 확인하거나 새로고침 후 다시 시도하세요.`)), ms))
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} 단계가 ${ms/1000}초 넘게 완료되지 않았습니다. 네트워크 상태를 확인한 뒤 새로고침하거나, 브라우저 캐시 삭제 후 다시 시도하세요.`)), ms))
   ]);
 
   const loadingPromise=(async()=>{
@@ -730,12 +733,12 @@ async function loadFfmpeg(){
     const [coreURL, wasmURL, classWorkerURL] = await withTimeout(Promise.all([
       fetchWithProgress(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript', (l,t)=>{progress.core=l;totals.core=t;reportProgress();}),
       fetchWithProgress(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm', (l,t)=>{progress.wasm=l;totals.wasm=t;reportProgress();}),
-      fetchWithProgress(`${ffmpegPkgBaseURL}/worker.js`, 'text/javascript', (l,t)=>{progress.worker=l;totals.worker=t;reportProgress();})
-    ]), 120000, 'ffmpeg 엔진');
+      fetchWithProgress(ffmpegClassWorkerURL, 'text/javascript', (l,t)=>{progress.worker=l;totals.worker=t;reportProgress();})
+    ]), 180000, 'ffmpeg 엔진 파일');
     setStatus('ffmpeg 엔진 초기화 중... (거의 다 됐습니다)');
-    // CDN에서 받아온 파일을 blob URL로 변환해서 "같은 출처"인 것처럼 넘겨야
-    // 브라우저가 Worker 생성을 막지 않습니다(코어뿐 아니라 워커 스크립트도 동일하게 처리).
-    await withTimeout(ffmpeg.load({ coreURL, wasmURL, classWorkerURL }), 30000, 'ffmpeg 엔진 초기화');
+    // CDN에서 받아온 파일을 blob URL로 변환해서 Worker/CORS 문제를 우회합니다.
+    // 초기 WebAssembly 컴파일은 PC/네트워크 상태에 따라 30초를 넘길 수 있어 3분까지 허용합니다.
+    await withTimeout(ffmpeg.load({ coreURL, wasmURL, classWorkerURL }), 180000, 'ffmpeg 엔진 초기화');
     window.ffmpegState.ffmpeg=ffmpeg; window.ffmpegState.loaded=true;
     setStatus('ffmpeg 엔진 준비 완료');
     return ffmpeg;
