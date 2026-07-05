@@ -721,8 +721,10 @@ async function loadFfmpeg(){
 
   // ffmpeg.wasm 0.12+는 내부 worker.js가 필요합니다.
   // worker.js는 CDN이 아니라 같은 Vercel origin의 /vendor/ffmpeg/esm/worker.js에서 로딩됩니다.
-  // core/wasm 파일도 /vendor/core/umd 아래의 같은 origin 파일을 blob URL로 변환해 사용합니다.
-  const coreBaseURL='/vendor/core/umd';
+  // ESM 방식으로 @ffmpeg/ffmpeg를 직접 import하므로, core도 반드시 dist/esm 버전을 사용해야 합니다.
+  // UMD core를 module worker에서 import하면 createFFmpegCore default export를 찾지 못해
+  // 'failed to import ffmpeg-core.js'가 발생할 수 있습니다.
+  const coreBaseURL='/vendor/core/esm';
 
   const withTimeout=(promise, ms, label)=>Promise.race([
     promise,
@@ -733,12 +735,12 @@ async function loadFfmpeg(){
     const { toBlobURL } = window.ffmpegState;
     if(!toBlobURL) throw new Error('@ffmpeg/util 로컬 모듈 로딩에 실패했습니다. /vendor/util/esm/index.js 파일 배포 여부를 확인하세요.');
 
-    setStatus('ffmpeg 엔진 로딩 시작... (최초 1회, 약 31MB / Vercel에 같이 배포된 파일 사용)');
+    setStatus('ffmpeg 엔진 로딩 시작... (최초 1회, 약 31MB / ESM core 파일 사용)');
 
-    // coreURL/wasmURL은 같은 origin의 정적 파일을 blob URL로 변환해 로딩합니다.
+    // @ffmpeg/ffmpeg dist/esm의 worker는 module worker입니다. 따라서 core도 /vendor/core/esm의 ESM 파일을 로딩합니다.
     const [coreURL, wasmURL] = await withTimeout(Promise.all([
-      toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
-      toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm')
+      toBlobURL(`${coreBaseURL}/ffmpeg-core.js?v=esmcore-fix-1`, 'text/javascript'),
+      toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm?v=esmcore-fix-1`, 'application/wasm')
     ]), 180000, 'ffmpeg 엔진 파일 다운로드');
 
     setStatus('ffmpeg 엔진 초기화 중... (WebAssembly 컴파일 중, 최초 1회 시간이 걸릴 수 있습니다)');

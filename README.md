@@ -1,3 +1,7 @@
+# ESM core ffmpeg fix 적용본
+
+`failed to import ffmpeg-core.js` 대응을 위해 `@ffmpeg/core/dist/esm`을 사용하도록 수정한 배포본입니다. 자세한 내용은 `DEPLOY_NOTE_ESMCORE_FIX.md`를 확인하세요.
+
 # Goodday24news Auto Video Maker
 
 브리핑 원문 → 카드뉴스 이미지 → Google Cloud TTS 음성 → MP4 자동 생성 → 유튜브 쇼츠 자동 업로드까지 한 번에 처리하는 웹앱입니다.

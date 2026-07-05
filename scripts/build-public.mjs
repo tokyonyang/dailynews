@@ -42,12 +42,12 @@ copyDir(
   path.join(publicDir, 'vendor', 'util', 'esm')
 );
 copyFile(
-  path.join(root, 'node_modules', '@ffmpeg', 'core', 'dist', 'umd', 'ffmpeg-core.js'),
-  path.join(publicDir, 'vendor', 'core', 'umd', 'ffmpeg-core.js')
+  path.join(root, 'node_modules', '@ffmpeg', 'core', 'dist', 'esm', 'ffmpeg-core.js'),
+  path.join(publicDir, 'vendor', 'core', 'esm', 'ffmpeg-core.js')
 );
 copyFile(
-  path.join(root, 'node_modules', '@ffmpeg', 'core', 'dist', 'umd', 'ffmpeg-core.wasm'),
-  path.join(publicDir, 'vendor', 'core', 'umd', 'ffmpeg-core.wasm')
+  path.join(root, 'node_modules', '@ffmpeg', 'core', 'dist', 'esm', 'ffmpeg-core.wasm'),
+  path.join(publicDir, 'vendor', 'core', 'esm', 'ffmpeg-core.wasm')
 );
 
-console.log('Build complete: index.html and ffmpeg.wasm vendor files copied to /public');
+console.log('Build complete: index.html and ffmpeg.wasm ESM vendor files copied to /public');
