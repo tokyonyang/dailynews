@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { input, model, voice, instructions } = req.body || {};
+    const { input, model, voice, instructions, speed } = req.body || {};
     if (!input || typeof input !== "string") {
       res.status(400).send("input 값이 필요합니다.");
       return;
@@ -20,11 +20,15 @@ export default async function handler(req, res) {
     const allowedModels = new Set(["gpt-4o-mini-tts", "tts-1", "tts-1-hd"]);
     const selectedModel = allowedModels.has(model) ? model : "gpt-4o-mini-tts";
 
+    const parsedSpeed = parseFloat(speed);
+    const selectedSpeed = Number.isFinite(parsedSpeed) ? Math.min(4.0, Math.max(0.25, parsedSpeed)) : 1.0;
+
     const payload = {
       model: selectedModel,
       voice: voice || "marin",
       input: input.slice(0, 4000),
-      response_format: "mp3"
+      response_format: "mp3",
+      speed: selectedSpeed
     };
 
     if (instructions && selectedModel === "gpt-4o-mini-tts") {

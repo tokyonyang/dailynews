@@ -90,13 +90,19 @@
 ## 참고
 
 - MP4 생성은 브라우저 내부의 `ffmpeg.wasm`으로 처리됩니다.
-- 최초 실행 시 ffmpeg.wasm 다운로드 때문에 시간이 걸릴 수 있습니다.
+- **[v9 변경] `ffmpeg.wasm` 관련 파일을 CDN(unpkg) 대신 이 프로젝트 안에 직접 포함해서(`/vendor/ffmpeg`, `/vendor/ffmpeg-core`) 같은 출처(same-origin)에서 서빙합니다.** 원래 있던 "Failed to construct 'Worker': ... cannot be accessed from origin" 오류의 근본 원인이 CDN에서 워커 스크립트를 크로스오리진으로 불러오는 구조 자체였는데, 파일을 자체 호스팅하면 이 문제가 아예 발생할 수 없는 구조가 됩니다. `ffmpeg.wasm` 공식 GitHub 저장소(https://github.com/ffmpegwasm/ffmpeg.wasm)의 디스커션에서도 크로스도메인 배포 시 가장 안정적인 방법으로 이 방식을 권장합니다. 대신 `ffmpeg-core.wasm` 파일 자체가 약 31MB라 저장소 용량이 그만큼 늘어납니다(최초 배포 시 한 번만 받으면 되고, `vercel.json`에 1년 캐시 헤더를 걸어뒀습니다).
+- 최초 실행 시 이 31MB 파일을 다운로드하는 시간이 걸릴 수 있습니다. 이후에는 브라우저 캐시로 즉시 로드됩니다.
 - 브라우저 메모리 제한이 있으면 1:1 비율부터 테스트하세요.
-- `ffmpeg.wasm`은 코어 파일뿐 아니라 자체 워커 스크립트(`@ffmpeg/ffmpeg`의 `worker.js`)도 사용합니다. 이 워커를 CDN 주소로 그대로 넘기면 브라우저가 "Failed to construct 'Worker': ... cannot be accessed from origin" 오류를 내며 차단합니다(Worker는 원칙적으로 동일 출처 스크립트만 허용). 이 앱은 `classWorkerURL` 옵션으로 워커 스크립트를 미리 fetch해서 blob URL로 변환한 뒤 전달해 이 문제를 해결했습니다. 만약 이 오류가 다시 뜬다면 `@ffmpeg/ffmpeg` 버전을 올릴 때 `classWorkerURL` 처리를 유지했는지 확인하세요.
 - OpenAI API 키, 유튜브 클라이언트 시크릿/리프레시 토큰은 브라우저에 노출되지 않고 Vercel 서버리스 함수에서만 사용됩니다.
 - 인스타그램 릴스, 네이버 클립은 공식 공개 업로드 API가 없어(또는 제한적이어서) 이 앱에서 자동 업로드를 지원하지 않습니다. 완성된 MP4/SRT를 다운로드해 수동 업로드하는 것을 권장합니다.
 
-## v8 수정 사항 (이번 업데이트)
+## v9 수정 사항 (이번 업데이트)
+
+- **ffmpeg.wasm 자체 호스팅으로 전환**: 기존에는 unpkg CDN에서 코어/워커 파일을 받아 `toBlobURL`로 우회하는 방식이었는데, 이 구조 자체가 "Failed to construct 'Worker'" 류의 크로스오리진 오류가 재발할 여지를 남겨뒀습니다. 이번에 `@ffmpeg/ffmpeg`, `@ffmpeg/core` 패키지 파일을 프로젝트 안(`/vendor`)에 직접 포함해서 같은 출처에서 서빙하도록 바꿨습니다. 이제 CDN도, blob 변환도, COOP/COEP 헤더도 필요 없습니다 — 구조적으로 해당 오류가 다시 날 수 없습니다. (참고로 경로가 절대경로(origin 기준)로 두 번 겹쳐 해석되는 미묘한 버그도 이 과정에서 함께 잡았습니다.)
+- `vercel.json`에서 더 이상 필요 없는 COOP/COEP 헤더를 제거하고, `/vendor` 정적 파일에 1년 캐시 헤더를 추가했습니다.
+- `@ffmpeg/util`(fetchFile) 의존성을 제거하고 동일한 기능을 3줄짜리 로컬 함수로 대체해 외부 의존성을 하나 더 줄였습니다.
+
+## v8 수정 사항
 
 - **MP4 저장 안정성 강화**: 생성된 파일이 0바이트인 경우를 명확한 오류로 표시하고, 생성이 끝나면 다운로드가 자동으로 시작되도록 변경(기존에는 링크를 직접 클릭해야 했습니다). 실패 시 원인 추정 안내 문구도 더 구체적으로 바꿨습니다.
 - **TTS 속도 조절 기능 추가**(`ttsSpeed` 셀렉트, 1.0~1.5배) — `api/tts.js`가 OpenAI TTS의 `speed` 파라미터를 지원합니다.
