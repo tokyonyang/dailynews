@@ -48,6 +48,7 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <button onclick="playAllAudio()">음성 전체 재생</button>
 <button onclick="downloadAllAudio()">전체 MP3 다운로드</button>
 <button onclick="downloadSrt()">SRT 자막 다운로드</button>
+<button class="secondary" onclick="preloadFfmpeg()">ffmpeg 엔진 미리 준비</button>
 <button class="green" onclick="renderMp4()">MP4 생성</button>
 <button class="danger" onclick="stopAll()">정지</button>
 </div>
@@ -134,9 +135,8 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 
 <script type="module">
 import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
-import { toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
 
-window.ffmpegState = { ffmpeg:null, loaded:false, FFmpeg, toBlobURL };
+window.ffmpegState = { ffmpeg:null, loaded:false, loadingPromise:null, FFmpeg };
 </script>
 
 <script>
@@ -666,25 +666,100 @@ async function createSlidePngBlob(slide, idx){
   }
   return new Promise(resolve=>c.toBlob(resolve,'image/png',.95));
 }
+async function fetchWithProgress(url, mimeType, onProgress){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`파일을 받아오지 못했습니다 (HTTP ${res.status}): ${url}`);
+  const total = parseInt(res.headers.get('Content-Length')||'0', 10);
+  if(!res.body || !res.body.getReader){
+    // 스트리밍을 지원하지 않는 환경(구형 브라우저 등)에서는 그냥 통째로 받습니다.
+    const buf = await res.arrayBuffer();
+    if(onProgress) onProgress(buf.byteLength, buf.byteLength);
+    return URL.createObjectURL(new Blob([buf], {type:mimeType}));
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    chunks.push(value);
+    loaded += value.length;
+    if(onProgress) onProgress(loaded, total);
+  }
+  return URL.createObjectURL(new Blob(chunks, {type:mimeType}));
+}
+
 async function loadFfmpeg(){
   if(!window.ffmpegState){throw new Error('ffmpeg.wasm 모듈이 아직 로딩되지 않았습니다. 새로고침 후 다시 시도하세요.')}
   if(window.ffmpegState.loaded) return window.ffmpegState.ffmpeg;
-  setStatus('ffmpeg.wasm 로딩 중... 최초 1회는 시간이 걸립니다.');
-  const {FFmpeg,toBlobURL}=window.ffmpegState;
+  if(window.ffmpegState.loadingPromise) return window.ffmpegState.loadingPromise;
+
+  const {FFmpeg}=window.ffmpegState;
   const ffmpeg = new FFmpeg();
   ffmpeg.on('log', ({message})=>{ if(message) setStatus(message.slice(0,180)); });
+
   const coreBaseURL='https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
   const ffmpegPkgBaseURL='https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
-  // CDN에서 받아온 파일을 blob URL로 변환해서 "같은 출처"인 것처럼 넘겨야
-  // 브라우저가 Worker 생성을 막지 않습니다(코어뿐 아니라 워커 스크립트도 동일하게 처리).
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    classWorkerURL: await toBlobURL(`${ffmpegPkgBaseURL}/worker.js`, 'text/javascript')
-  });
-  window.ffmpegState.ffmpeg=ffmpeg; window.ffmpegState.loaded=true; return ffmpeg;
+
+  const progress={core:0,wasm:0,worker:0};
+  const totals={core:0,wasm:0,worker:0};
+  let lastReportTime=0;
+  function reportProgress(){
+    const now=Date.now();
+    if(now-lastReportTime<200) return; // 너무 잦은 갱신 방지
+    lastReportTime=now;
+    const loaded=progress.core+progress.wasm+progress.worker;
+    const total=totals.core+totals.wasm+totals.worker;
+    if(total>0){
+      const pct=Math.min(100,Math.round(loaded/total*100));
+      const mb=(loaded/1024/1024).toFixed(1);
+      const totalMb=(total/1024/1024).toFixed(1);
+      setStatus(`ffmpeg 엔진 다운로드 중... ${pct}% (${mb}MB / ${totalMb}MB, 최초 1회만 받으면 이후엔 브라우저 캐시로 즉시 로드됩니다)`);
+    } else {
+      setStatus('ffmpeg 엔진 다운로드 준비 중... (파일 크기를 확인하는 중)');
+    }
+  }
+
+  const withTimeout=(promise, ms, label)=>Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} 다운로드가 ${ms/1000}초 넘게 응답이 없습니다. 네트워크 상태를 확인하거나 새로고침 후 다시 시도하세요.`)), ms))
+  ]);
+
+  const loadingPromise=(async()=>{
+    setStatus('ffmpeg 엔진 다운로드 시작... (최초 1회, 약 30MB)');
+    const [coreURL, wasmURL, classWorkerURL] = await withTimeout(Promise.all([
+      fetchWithProgress(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript', (l,t)=>{progress.core=l;totals.core=t;reportProgress();}),
+      fetchWithProgress(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm', (l,t)=>{progress.wasm=l;totals.wasm=t;reportProgress();}),
+      fetchWithProgress(`${ffmpegPkgBaseURL}/worker.js`, 'text/javascript', (l,t)=>{progress.worker=l;totals.worker=t;reportProgress();})
+    ]), 120000, 'ffmpeg 엔진');
+    setStatus('ffmpeg 엔진 초기화 중... (거의 다 됐습니다)');
+    // CDN에서 받아온 파일을 blob URL로 변환해서 "같은 출처"인 것처럼 넘겨야
+    // 브라우저가 Worker 생성을 막지 않습니다(코어뿐 아니라 워커 스크립트도 동일하게 처리).
+    await withTimeout(ffmpeg.load({ coreURL, wasmURL, classWorkerURL }), 30000, 'ffmpeg 엔진 초기화');
+    window.ffmpegState.ffmpeg=ffmpeg; window.ffmpegState.loaded=true;
+    setStatus('ffmpeg 엔진 준비 완료');
+    return ffmpeg;
+  })();
+
+  window.ffmpegState.loadingPromise=loadingPromise;
+  try{
+    return await loadingPromise;
+  }catch(err){
+    window.ffmpegState.loadingPromise=null; // 실패하면 다음 시도 때 다시 받도록 초기화
+    throw err;
+  }
 }
 async function blobToUint8Array(blob){ return new Uint8Array(await blob.arrayBuffer()); }
+async function preloadFfmpeg(){
+  try{
+    await loadFfmpeg();
+    alert('ffmpeg 엔진 준비 완료! 이제 MP4 생성 시 이 단계는 건너뛰고 바로 영상 조각 생성으로 넘어갑니다.');
+  }catch(err){
+    console.error(err);
+    setStatus('ffmpeg 엔진 준비 실패: '+err.message);
+    alert('ffmpeg 엔진 준비 실패\n\n'+err.message);
+  }
+}
 async function renderMp4(){
   try{
     output.innerHTML='';
@@ -787,7 +862,7 @@ window.handleSingleUpload=handleSingleUpload; window.handleBulkUpload=handleBulk
 window.applyBulkAssign=applyBulkAssign; window.cancelBulkAssign=cancelBulkAssign;
 window.generateAudioForIndex=generateAudioForIndex; window.generateCurrentAudio=generateCurrentAudio; window.generateAllAudio=generateAllAudio;
 window.playAudioIndex=playAudioIndex; window.downloadAudioIndex=downloadAudioIndex; window.downloadAllAudio=downloadAllAudio; window.playAllAudio=playAllAudio; window.downloadSrt=downloadSrt; window.stopAll=stopAll;
-window.resetScripts=resetScripts; window.clearAudios=clearAudios; window.autoBuildFromBriefing=autoBuildFromBriefing; window.renderMp4=renderMp4;
+window.resetScripts=resetScripts; window.clearAudios=clearAudios; window.autoBuildFromBriefing=autoBuildFromBriefing; window.renderMp4=renderMp4; window.preloadFfmpeg=preloadFfmpeg;
 window.fetchFromTelegram=fetchFromTelegram;
 window.generateImageForIndex=generateImageForIndex; window.generateAllImages=generateAllImages; window.clearSlideImage=clearSlideImage;
 window.fillYoutubeDefaults=fillYoutubeDefaults; window.uploadToYoutubeShorts=uploadToYoutubeShorts;
