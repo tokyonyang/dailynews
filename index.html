@@ -706,15 +706,14 @@ async function loadFfmpeg(){
   const ffmpeg = new FFmpeg();
   ffmpeg.on('log', ({message})=>{ if(message) setStatus(message.slice(0,180)); });
 
-  // ffmpeg.wasm 0.12 계열은 2종류의 Worker가 있습니다.
-  // 1) @ffmpeg/ffmpeg 쪽 class worker: FFmpeg 클래스가 명령을 전달하는 외부 Worker
-  // 2) @ffmpeg/core 쪽 core worker: ffmpeg-core.js가 wasm/worker 파일을 찾을 때 쓰는 내부 Worker
-  // coreURL을 blob URL로 바꾸면 .worker.js 자동 추론이 깨질 수 있으므로 workerURL도 반드시 같이 넘깁니다.
+  // single-thread용 @ffmpeg/core에는 ffmpeg-core.worker.js 파일이 없습니다.
+  // 따라서 coreURL/wasmURL만 넘기고, @ffmpeg/ffmpeg 쪽 class worker만 별도로 지정합니다.
+  // workerURL이 필요한 경우는 @ffmpeg/core-mt(멀티스레드) 사용 시입니다.
   const coreBaseURL='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
   const ffmpegClassWorkerURL='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js';
 
-  const progress={core:0,wasm:0,coreWorker:0,classWorker:0};
-  const totals={core:0,wasm:0,coreWorker:0,classWorker:0};
+  const progress={core:0,wasm:0,classWorker:0};
+  const totals={core:0,wasm:0,classWorker:0};
   let lastReportTime=0;
   function reportProgress(){
     const now=Date.now();
@@ -739,17 +738,16 @@ async function loadFfmpeg(){
 
   const loadingPromise=(async()=>{
     setStatus('ffmpeg 엔진 다운로드 시작... (최초 1회, 약 30MB)');
-    const [coreURL, wasmURL, workerURL, classWorkerURL] = await withTimeout(Promise.all([
+    const [coreURL, wasmURL, classWorkerURL] = await withTimeout(Promise.all([
       fetchWithProgress(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript', (l,t)=>{progress.core=l;totals.core=t;reportProgress();}),
       fetchWithProgress(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm', (l,t)=>{progress.wasm=l;totals.wasm=t;reportProgress();}),
-      fetchWithProgress(`${coreBaseURL}/ffmpeg-core.worker.js`, 'text/javascript', (l,t)=>{progress.coreWorker=l;totals.coreWorker=t;reportProgress();}),
       fetchWithProgress(ffmpegClassWorkerURL, 'text/javascript', (l,t)=>{progress.classWorker=l;totals.classWorker=t;reportProgress();})
     ]), 180000, 'ffmpeg 엔진 파일');
     setStatus('ffmpeg 엔진 초기화 중... (거의 다 됐습니다)');
     // CDN에서 받아온 파일을 blob URL로 변환해서 Worker/CORS 문제를 우회합니다.
-    // coreURL을 blob으로 쓰면 ffmpeg-core.worker.js 자동 경로 추론이 실패할 수 있어 workerURL을 명시합니다.
+    // @ffmpeg/core single-thread 빌드는 workerURL을 넘기지 않아야 합니다.
     // 초기 WebAssembly 컴파일은 PC/네트워크 상태에 따라 30초를 넘길 수 있어 3분까지 허용합니다.
-    await withTimeout(ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL }), 180000, 'ffmpeg 엔진 초기화');
+    await withTimeout(ffmpeg.load({ coreURL, wasmURL, classWorkerURL }), 180000, 'ffmpeg 엔진 초기화');
     window.ffmpegState.ffmpeg=ffmpeg; window.ffmpegState.loaded=true;
     setStatus('ffmpeg 엔진 준비 완료');
     return ffmpeg;
