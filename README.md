@@ -90,13 +90,17 @@
 ## 참고
 
 - MP4 생성은 브라우저 내부의 `ffmpeg.wasm`으로 처리됩니다.
-- **[v9 변경] `ffmpeg.wasm` 관련 파일을 CDN(unpkg) 대신 이 프로젝트 안에 직접 포함해서(`/vendor/ffmpeg`, `/vendor/ffmpeg-core`) 같은 출처(same-origin)에서 서빙합니다.** 원래 있던 "Failed to construct 'Worker': ... cannot be accessed from origin" 오류의 근본 원인이 CDN에서 워커 스크립트를 크로스오리진으로 불러오는 구조 자체였는데, 파일을 자체 호스팅하면 이 문제가 아예 발생할 수 없는 구조가 됩니다. `ffmpeg.wasm` 공식 GitHub 저장소(https://github.com/ffmpegwasm/ffmpeg.wasm)의 디스커션에서도 크로스도메인 배포 시 가장 안정적인 방법으로 이 방식을 권장합니다. 대신 `ffmpeg-core.wasm` 파일 자체가 약 31MB라 저장소 용량이 그만큼 늘어납니다(최초 배포 시 한 번만 받으면 되고, `vercel.json`에 1년 캐시 헤더를 걸어뒀습니다).
-- 최초 실행 시 이 31MB 파일을 다운로드하는 시간이 걸릴 수 있습니다. 이후에는 브라우저 캐시로 즉시 로드됩니다.
+- `ffmpeg.wasm` 코어/워커 파일은 CDN(unpkg)에서 받아와 `toBlobURL`로 "같은 출처"인 것처럼 변환해서 사용합니다(코어뿐 아니라 `@ffmpeg/ffmpeg`의 자체 워커 스크립트도 동일하게 처리). 이렇게 하지 않으면 브라우저가 "Failed to construct 'Worker': ... cannot be accessed from origin" 오류를 내며 차단합니다. **자체 호스팅(레포에 파일 직접 포함)은 시도해봤지만 GitHub 웹사이트 업로드가 파일당 25MB 제한이 있어서(핵심 wasm 파일이 31MB) 오히려 배포가 깨지는 원인이 되므로 다시 CDN 방식으로 되돌렸습니다.** git 명령어나 GitHub Desktop으로 push하는 환경이라면 자체 호스팅도 가능하니 필요하면 요청하세요.
+- 최초 실행 시 ffmpeg.wasm CDN 다운로드 때문에 시간이 걸릴 수 있습니다.
 - 브라우저 메모리 제한이 있으면 1:1 비율부터 테스트하세요.
 - OpenAI API 키, 유튜브 클라이언트 시크릿/리프레시 토큰은 브라우저에 노출되지 않고 Vercel 서버리스 함수에서만 사용됩니다.
 - 인스타그램 릴스, 네이버 클립은 공식 공개 업로드 API가 없어(또는 제한적이어서) 이 앱에서 자동 업로드를 지원하지 않습니다. 완성된 MP4/SRT를 다운로드해 수동 업로드하는 것을 권장합니다.
 
-## v9 수정 사항 (이번 업데이트)
+## v10 수정 사항 (이번 업데이트)
+
+- **v9의 ffmpeg.wasm 자체 호스팅을 되돌렸습니다.** GitHub 웹사이트에서 드래그앤드롭으로 업로드하는 배포 방식에서는 파일당 25MB 제한이 있어서, 31MB짜리 `ffmpeg-core.wasm`이 정상적으로 올라가지 않아 오히려 "ffmpeg.wasm 모듈이 아직 로딩되지 않았습니다" 오류가 발생했습니다. 다시 CDN(unpkg) + `toBlobURL` 방식으로 되돌리고, `classWorkerURL`까지 blob 처리하는 수정(v6)은 그대로 유지했습니다. git 명령어/GitHub Desktop으로 push하는 환경이라면 자체 호스팅이 더 안정적이니 필요하면 다시 요청하세요.
+
+## v9 수정 사항
 
 - **ffmpeg.wasm 자체 호스팅으로 전환**: 기존에는 unpkg CDN에서 코어/워커 파일을 받아 `toBlobURL`로 우회하는 방식이었는데, 이 구조 자체가 "Failed to construct 'Worker'" 류의 크로스오리진 오류가 재발할 여지를 남겨뒀습니다. 이번에 `@ffmpeg/ffmpeg`, `@ffmpeg/core` 패키지 파일을 프로젝트 안(`/vendor`)에 직접 포함해서 같은 출처에서 서빙하도록 바꿨습니다. 이제 CDN도, blob 변환도, COOP/COEP 헤더도 필요 없습니다 — 구조적으로 해당 오류가 다시 날 수 없습니다. (참고로 경로가 절대경로(origin 기준)로 두 번 겹쳐 해석되는 미묘한 버그도 이 과정에서 함께 잡았습니다.)
 - `vercel.json`에서 더 이상 필요 없는 COOP/COEP 헤더를 제거하고, `/vendor` 정적 파일에 1년 캐시 헤더를 추가했습니다.

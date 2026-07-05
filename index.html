@@ -114,9 +114,10 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 </main>
 
 <script type="module">
-import { FFmpeg } from "./vendor/ffmpeg/index.js";
+import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+import { toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
 
-window.ffmpegState = { ffmpeg:null, loaded:false, FFmpeg };
+window.ffmpegState = { ffmpeg:null, loaded:false, FFmpeg, toBlobURL };
 </script>
 
 <script>
@@ -578,17 +579,17 @@ async function loadFfmpeg(){
   if(!window.ffmpegState){throw new Error('ffmpeg.wasm 모듈이 아직 로딩되지 않았습니다. 새로고침 후 다시 시도하세요.')}
   if(window.ffmpegState.loaded) return window.ffmpegState.ffmpeg;
   setStatus('ffmpeg.wasm 로딩 중... 최초 1회는 시간이 걸립니다.');
-  const {FFmpeg}=window.ffmpegState;
+  const {FFmpeg,toBlobURL}=window.ffmpegState;
   const ffmpeg = new FFmpeg();
   ffmpeg.on('log', ({message})=>{ if(message) setStatus(message.slice(0,180)); });
-  // 같은 출처(same-origin)에서 직접 서빙하므로 CDN/blob 변환이나 COOP/COEP 헤더가 필요 없습니다.
-  // 워커 내부에서 상대경로가 자신의 위치 기준으로 다시 해석되면서 경로가 중복되는 문제를 피하기 위해
-  // location.origin을 붙인 절대경로를 사용합니다.
-  const origin=location.origin;
+  const coreBaseURL='https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+  const ffmpegPkgBaseURL='https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+  // CDN에서 받아온 파일을 blob URL로 변환해서 "같은 출처"인 것처럼 넘겨야
+  // 브라우저가 Worker 생성을 막지 않습니다(코어뿐 아니라 워커 스크립트도 동일하게 처리).
   await ffmpeg.load({
-    coreURL: `${origin}/vendor/ffmpeg-core/ffmpeg-core.js`,
-    wasmURL: `${origin}/vendor/ffmpeg-core/ffmpeg-core.wasm`,
-    classWorkerURL: `${origin}/vendor/ffmpeg/worker.js`
+    coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    classWorkerURL: await toBlobURL(`${ffmpegPkgBaseURL}/worker.js`, 'text/javascript')
   });
   window.ffmpegState.ffmpeg=ffmpeg; window.ffmpegState.loaded=true; return ffmpeg;
 }
