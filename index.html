@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Goodday24news Auto Video Maker</title>
+<title>Goodday100news Auto Video Maker</title>
 <style>
 :root{--bg:#061224;--p:#0b1d36;--p2:#102947;--c:#20d6ff;--o:#ff9d1b;--t:#f4f8ff;--m:#a9bdd6;--r:#ff5b5b;--g:#3ee58c}
 *{box-sizing:border-box}body{margin:0;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top right,#12345c 0,var(--bg) 45%,#02070f 100%);color:var(--t)}
@@ -29,7 +29,7 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 </head>
 <body>
 <header>
-<h1>Goodday24news Auto Video Maker</h1>
+<h1>Goodday100news Auto Video Maker</h1>
 <div class="sub">카드뉴스 이미지 + Google Cloud TTS MP3 + 하단 자막/브랜드 + 마지막 블로그 안내 → MP4 자동 생성</div>
 </header>
 <main>
@@ -106,7 +106,7 @@ textarea{width:100%;background:rgba(0,0,0,.25);color:var(--t);border:1px solid r
 <section class="card right">
 <div class="toolbar">
 <div>
-<div class="brand">Instagram @goodday24news</div>
+<div class="brand">Instagram @goodday100news</div>
 <div class="small">API 키는 Vercel 환경변수 <b>OPENAI_API_KEY</b>(스크립트·이미지), <b>GOOGLE_TTS_API_KEY</b>(음성)로만 사용합니다. MP4는 브라우저 안에서 ffmpeg.wasm으로 생성합니다.</div>
 </div>
 <label class="file-label" for="bulkUpload">이미지 일괄 업로드(최대 8장)</label>
@@ -359,7 +359,7 @@ async function generateAllAudio(){for(let i=0;i<slides.length;i++){await generat
 function playAudioIndex(idx){currentIndex=idx;renderAll();setTimeout(()=>currentAudio.play(),100)}
 function playAllAudio(){playing=true;let i=0;const playNext=()=>{if(!playing||i>=slides.length){playing=false;return}; if(!slides[i].audioUrl){i++;playNext();return}; currentIndex=i;renderAll(); currentAudio.onended=()=>{i++;setTimeout(playNext,500)}; currentAudio.play();};playNext()}
 function stopAll(){playing=false;currentAudio.pause();currentAudio.currentTime=0;setStatus('정지')}
-function downloadAudioIndex(idx){const s=slides[idx]; if(!s.audioUrl)return; const a=document.createElement('a'); a.href=s.audioUrl; a.download=`goodday24news_slide_${String(idx+1).padStart(2,'0')}.mp3`; a.click()}
+function downloadAudioIndex(idx){const s=slides[idx]; if(!s.audioUrl)return; const a=document.createElement('a'); a.href=s.audioUrl; a.download=`goodday100news_slide_${String(idx+1).padStart(2,'0')}.mp3`; a.click()}
 async function downloadAllAudio(){
   const targets=slides.map((s,i)=>i).filter(i=>slides[i].audioUrl);
   if(!targets.length){ alert('다운로드할 MP3가 없습니다. 먼저 [전체 MP3 생성]을 실행하세요.'); return; }
@@ -373,7 +373,7 @@ async function downloadAllAudio(){
 function clearAudios(){slides.forEach(s=>{if(s.audioUrl)URL.revokeObjectURL(s.audioUrl);s.audioUrl='';s.audioBlob=null});renderAll();setStatus('생성 음성 초기화 완료')}
 
 function secToSrtTime(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60),ms=Math.floor((sec-Math.floor(sec))*1000);return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`}
-function downloadSrt(){let now=0,srt='';slides.forEach((sl,i)=>{const d=estimateSeconds(sl.script);srt+=`${i+1}\n${secToSrtTime(now)} --> ${secToSrtTime(now+d)}\n${sl.caption||sl.script}\n\n`;now+=d+.4});const blob=new Blob([srt],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='goodday24news_morning_briefing.srt';a.click();URL.revokeObjectURL(a.href)}
+function downloadSrt(){let now=0,srt='';slides.forEach((sl,i)=>{const d=estimateSeconds(sl.script);srt+=`${i+1}\n${secToSrtTime(now)} --> ${secToSrtTime(now+d)}\n${sl.caption||sl.script}\n\n`;now+=d+.4});const blob=new Blob([srt],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='goodday100news_morning_briefing.srt';a.click();URL.revokeObjectURL(a.href)}
 
 function resetScripts(){slides=JSON.parse(JSON.stringify(initialSlides));applyOutroToLastSlide();renderAll();setStatus('오늘 예시로 초기화 완료')}
 
@@ -676,7 +676,7 @@ async function createSlidePngBlob(slide, idx){
       ctx.fillStyle='#20d6ff';
       ctx.font=`900 ${Math.floor(W*0.024)}px sans-serif`;
       ctx.textAlign='left';
-      ctx.fillText(`Instagram @goodday24news`, W*.055, y+Math.floor(boxH*.28));
+      ctx.fillText(`Instagram @goodday100news`, W*.055, y+Math.floor(boxH*.28));
 
       ctx.fillStyle='#ffffff';
       ctx.font=`900 ${Math.floor(W*0.038)}px sans-serif`;
@@ -795,15 +795,15 @@ async function renderMp4(){
     const list=segs.map(s=>`file '${s}'`).join('\n');
     await ffmpeg.writeFile('list.txt', new TextEncoder().encode(list));
     setStatus('영상 조각 합치는 중...');
-    await ffmpeg.exec(['-y','-f','concat','-safe','0','-i','list.txt','-c','copy','goodday24news_morning_briefing.mp4']);
-    const data=await ffmpeg.readFile('goodday24news_morning_briefing.mp4');
+    await ffmpeg.exec(['-y','-f','concat','-safe','0','-i','list.txt','-c','copy','goodday100news_morning_briefing.mp4']);
+    const data=await ffmpeg.readFile('goodday100news_morning_briefing.mp4');
     if(!data || !data.length){ throw new Error('생성된 MP4 파일 크기가 0바이트입니다. 브라우저 메모리 부족이거나 ffmpeg 처리 중 오류가 있었을 수 있습니다.'); }
     const blob=new Blob([data.buffer],{type:'video/mp4'});
     window.lastMp4Blob=blob;
     const url=URL.createObjectURL(blob);
-    output.innerHTML=`<a href="${url}" download="goodday24news_morning_briefing.mp4" id="mp4DownloadLink">MP4 다운로드 (자동으로 시작되지 않으면 클릭)</a><video src="${url}" controls style="width:100%;margin-top:12px;border-radius:14px"></video>`;
+    output.innerHTML=`<a href="${url}" download="goodday100news_morning_briefing.mp4" id="mp4DownloadLink">MP4 다운로드 (자동으로 시작되지 않으면 클릭)</a><video src="${url}" controls style="width:100%;margin-top:12px;border-radius:14px"></video>`;
     const autoDownload=document.createElement('a');
-    autoDownload.href=url; autoDownload.download='goodday24news_morning_briefing.mp4';
+    autoDownload.href=url; autoDownload.download='goodday100news_morning_briefing.mp4';
     document.body.appendChild(autoDownload); autoDownload.click(); autoDownload.remove();
     setStatus(`MP4 생성 완료 (${(blob.size/1024/1024).toFixed(1)}MB) — 다운로드가 자동으로 시작됩니다.`);
     fillYoutubeDefaults();
